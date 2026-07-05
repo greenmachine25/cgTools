@@ -130,7 +130,6 @@ const vizSvg = document.getElementById('viz-svg');
 const vizGround = document.getElementById('viz-ground');
 const vizGroundGrid = document.getElementById('viz-ground-grid');
 const vizChar = document.getElementById('viz-char');
-const vizResLabel = document.getElementById('viz-res-label');
 const vizGridPattern = document.getElementById('viz-grid');
 const vizGridSolidPattern = document.getElementById('viz-grid-solid');
 const vizSvgContainer = document.getElementById('viz-svg-container');
@@ -1443,9 +1442,12 @@ function initVisualizer() {
     const resValue = selectVizRes.value;
     const [w, h] = resValue.split(',').map(Number);
     
-    // Update SVG viewBox and label
+    // Update SVG viewBox
     vizSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-    vizResLabel.textContent = `${w}x${h}`;
+    
+    // Set actual container size for zooming
+    vizSvgContainer.style.width = `${w}px`;
+    vizSvgContainer.style.height = `${h}px`;
     
     // 2. Get Character Size
     const charW = parseInt(valCharWidth.value) || 30;
@@ -1670,12 +1672,12 @@ function initVizProfiles(updateCb) {
 }
 
 // Check for updates every 60s
-const CURRENT_VERSION = 'v0.14';
+const CURRENT_VERSION = 'v0.16';
 function checkForUpdates() {
   fetch('./index.html?t=' + Date.now())
     .then(r => r.text())
     .then(html => {
-      const match = html.match(/<span class="app-version">(.*?)<\/span>/);
+      const match = html.match(/<span class="app-version">(v\d+\.\d+)<\/span>/);
       if (match && match[1] && match[1] !== CURRENT_VERSION) {
         showToast('', 'update', `<span>New version detected (${match[1]}).</span> <button onclick="location.reload(true)" style="margin-left:10px;padding:4px 8px;background:var(--accent-lime);color:var(--bg-dark);border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Refresh</button>`);
       }
