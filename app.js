@@ -1165,3 +1165,47 @@ function setupGlobalShortcuts() {
     }
   });
 }
+
+/* ==========================================================================
+   UI Helpers & Version Checker
+   ========================================================================== */
+
+function showToast(message, type = 'info', htmlContent = null) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  if (htmlContent) {
+    toast.innerHTML = htmlContent;
+  } else {
+    toast.innerHTML = `<span>${message}</span>`;
+  }
+  
+  container.appendChild(toast);
+  
+  setTimeout(() => toast.classList.add('show'), 10);
+  
+  if (type !== 'update') {
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+}
+
+// Check for updates every 60s
+const CURRENT_VERSION = 'v0.07';
+function checkForUpdates() {
+  fetch('./index.html?t=' + Date.now())
+    .then(r => r.text())
+    .then(html => {
+      const match = html.match(/<span class="app-version">(.*?)<\/span>/);
+      if (match && match[1] && match[1] !== CURRENT_VERSION) {
+        showToast('', 'update', `<span>New version detected (${match[1]}).</span> <button onclick="location.reload(true)" style="margin-left:10px;padding:4px 8px;background:var(--accent-lime);color:var(--bg-dark);border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Refresh</button>`);
+      }
+    })
+    .catch(e => console.log('Update check failed', e));
+}
+setInterval(checkForUpdates, 60000);
+setTimeout(checkForUpdates, 5000);
