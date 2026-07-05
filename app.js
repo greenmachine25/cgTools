@@ -117,8 +117,10 @@ const btnDeleteConfig = document.getElementById('btn-delete-config');
 // Navigation & Tools
 const navVisualizer = document.getElementById('nav-visualizer');
 const navConverter = document.getElementById('nav-converter');
+const navCheckerboard = document.getElementById('nav-checkerboard');
 const toolVisualizer = document.getElementById('tool-visualizer');
 const toolConverter = document.getElementById('tool-converter');
+const toolCheckerboard = document.getElementById('tool-checkerboard');
 
 // Visualizer DOM
 const selectVizRes = document.getElementById('select-viz-res');
@@ -191,6 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupNavigation();
   initSettingsProfiles();
   initVisualizer();
+  initCheckerboard();
   setupUploadListeners();
   setupSlidersAndControls();
   setupComparisonSlider();
@@ -1421,18 +1424,21 @@ function applyProfile(p) {
    Visualizer Tool
    ========================================================================== */
 function setupNavigation() {
-  navVisualizer.addEventListener('click', () => {
-    navVisualizer.classList.add('active');
-    navConverter.classList.remove('active');
-    toolVisualizer.classList.remove('tool-hidden');
-    toolConverter.classList.add('tool-hidden');
-  });
+  const tabs = [
+    { nav: navVisualizer, tool: toolVisualizer },
+    { nav: navConverter, tool: toolConverter },
+    { nav: navCheckerboard, tool: toolCheckerboard }
+  ];
 
-  navConverter.addEventListener('click', () => {
-    navConverter.classList.add('active');
-    navVisualizer.classList.remove('active');
-    toolConverter.classList.remove('tool-hidden');
-    toolVisualizer.classList.add('tool-hidden');
+  tabs.forEach(tab => {
+    tab.nav.addEventListener('click', () => {
+      tabs.forEach(t => {
+        t.nav.classList.remove('active');
+        t.tool.classList.add('tool-hidden');
+      });
+      tab.nav.classList.add('active');
+      tab.tool.classList.remove('tool-hidden');
+    });
   });
 }
 
@@ -1687,7 +1693,7 @@ function initVizProfiles(updateCb) {
 }
 
 // Check for updates every 60s
-const CURRENT_VERSION = 'v0.23';
+const CURRENT_VERSION = 'v0.25';
 function checkForUpdates() {
   fetch('./index.html?t=' + Date.now())
     .then(r => r.text())
@@ -1701,3 +1707,244 @@ function checkForUpdates() {
 }
 setInterval(checkForUpdates, 60000);
 setTimeout(checkForUpdates, 5000);
+/* ==========================================================================
+   Checkerboard Tool
+   ========================================================================== */
+function initCheckerboard() {
+  const selectPreset = document.getElementById('select-check-preset');
+  const btnSavePreset = document.getElementById('btn-save-check');
+  const btnDeletePreset = document.getElementById('btn-delete-check');
+  const btnReset = document.getElementById('btn-reset-check');
+  
+  const valWidth = document.getElementById('val-check-width');
+  const rangeWidth = document.getElementById('range-check-width');
+  const valHeight = document.getElementById('val-check-height');
+  const rangeHeight = document.getElementById('range-check-height');
+  
+  const valColor1 = document.getElementById('val-check-color1');
+  const valColor2 = document.getElementById('val-check-color2');
+  
+  const valSquare = document.getElementById('val-check-square');
+  const rangeSquare = document.getElementById('range-check-square');
+  
+  const canvas = document.getElementById('check-canvas');
+  const ctx = canvas.getContext('2d');
+  
+  const btnCopy = document.getElementById('btn-check-copy');
+  const btnSave = document.getElementById('btn-check-save');
+  
+  const canvasContainer = document.getElementById('check-canvas-container');
+  const btnZoomIn = document.getElementById('btn-check-zoom-in');
+  const btnZoomOut = document.getElementById('btn-check-zoom-out');
+  const btnZoomReset = document.getElementById('btn-check-zoom-reset');
+  
+  let currentZoom = 1;
+
+  const updateZoom = () => {
+    canvasContainer.style.transform = `scale(${currentZoom})`;
+    btnZoomReset.textContent = `${Math.round(currentZoom * 100)}%`;
+  };
+  
+  const fitZoomToScreen = (w, h) => {
+    const scaleX = 800 / w;
+    const scaleY = 500 / h;
+    let targetZoom = Math.min(scaleX, scaleY);
+    targetZoom = Math.max(0.25, Math.floor(targetZoom * 4) / 4);
+    currentZoom = targetZoom;
+    updateZoom();
+  };
+
+  btnZoomIn.addEventListener('click', () => { currentZoom += 0.25; updateZoom(); });
+  btnZoomOut.addEventListener('click', () => { currentZoom = Math.max(0.10, currentZoom - 0.25); updateZoom(); });
+  btnZoomReset.addEventListener('click', () => { currentZoom = 1; updateZoom(); });
+
+  const setupSlider = (rangeEl, valEl) => {
+    rangeEl.addEventListener('input', () => {
+      valEl.value = rangeEl.value;
+      drawCheckerboard();
+    });
+    valEl.addEventListener('input', () => {
+      let val = parseInt(valEl.value);
+      if (isNaN(val)) return;
+      const min = parseInt(rangeEl.min) || 1;
+      const max = parseInt(rangeEl.max) || parseInt(rangeEl.max); // fallback
+      if (val < min) val = min;
+      if (val > max) val = max;
+      rangeEl.value = val;
+      drawCheckerboard();
+    });
+    valEl.addEventListener('blur', () => { valEl.value = rangeEl.value; });
+  };
+
+  setupSlider(rangeWidth, valWidth);
+  setupSlider(rangeHeight, valHeight);
+  setupSlider(rangeSquare, valSquare);
+  
+  const setupSpinControls = (inputEl, rangeEl) => {
+    const container = inputEl.closest('.input-with-suffix');
+    if (container && !container.querySelector('.spin-controls')) {
+      const spinControls = document.createElement('div');
+      spinControls.className = 'spin-controls';
+      spinControls.innerHTML = `
+        <button class="spin-up">▲</button>
+        <button class="spin-down">▼</button>
+      `;
+      container.appendChild(spinControls);
+
+      const btnUp = spinControls.querySelector('.spin-up');
+      const btnDown = spinControls.querySelector('.spin-down');
+
+      const stepVal = (dir) => {
+        let val = parseInt(inputEl.value) || 0;
+        val += dir;
+        const min = parseInt(inputEl.min) || 1;
+        const max = parseInt(inputEl.max) || parseInt(rangeEl.max);
+        if (val < min) val = min;
+        if (val > max) val = max;
+        
+        inputEl.value = val;
+        rangeEl.value = val;
+        drawCheckerboard();
+      };
+
+      btnUp.addEventListener('click', () => stepVal(1));
+      btnDown.addEventListener('click', () => stepVal(-1));
+    }
+  };
+
+  setupSpinControls(valWidth, rangeWidth);
+  setupSpinControls(valHeight, rangeHeight);
+  setupSpinControls(valSquare, rangeSquare);
+
+  valColor1.addEventListener('input', drawCheckerboard);
+  valColor2.addEventListener('input', drawCheckerboard);
+
+  function drawCheckerboard() {
+    const w = parseInt(valWidth.value) || 1920;
+    const h = parseInt(valHeight.value) || 1080;
+    const size = parseInt(valSquare.value) || 60;
+    const c1 = valColor1.value;
+    const c2 = valColor2.value;
+    
+    canvas.width = w;
+    canvas.height = h;
+    
+    canvasContainer.style.width = `${w}px`;
+    canvasContainer.style.height = `${h}px`;
+    
+    // Efficient fill
+    ctx.fillStyle = c2;
+    ctx.fillRect(0, 0, w, h);
+    
+    ctx.fillStyle = c1;
+    for (let y = 0; y < h; y += size) {
+      for (let x = 0; x < w; x += size) {
+        if ((Math.floor(x / size) + Math.floor(y / size)) % 2 === 0) {
+          ctx.fillRect(x, y, size, size);
+        }
+      }
+    }
+  }
+
+  // Presets
+  const STORAGE_KEY = 'cgTools_check_presets';
+  const loadProfiles = () => JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  const saveProfiles = (p) => localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+
+  const refreshDropdown = () => {
+    const profiles = loadProfiles();
+    selectPreset.innerHTML = '<option value="default">Default</option>';
+    Object.keys(profiles).forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      selectPreset.appendChild(opt);
+    });
+  };
+
+  refreshDropdown();
+
+  btnSavePreset.addEventListener('click', () => {
+    const name = prompt('Enter a name for this Checkerboard preset:');
+    if (!name) return;
+    const profiles = loadProfiles();
+    profiles[name] = {
+      w: valWidth.value,
+      h: valHeight.value,
+      c1: valColor1.value,
+      c2: valColor2.value,
+      sq: valSquare.value
+    };
+    saveProfiles(profiles);
+    refreshDropdown();
+    selectPreset.value = name;
+    showToast('Profile saved!', 'success');
+  });
+
+  btnDeletePreset.addEventListener('click', () => {
+    const name = selectPreset.value;
+    if (name === 'default') { showToast('Cannot delete default.', 'error'); return; }
+    if (!confirm(`Delete profile "${name}"?`)) return;
+    const profiles = loadProfiles();
+    delete profiles[name];
+    saveProfiles(profiles);
+    refreshDropdown();
+    btnReset.click();
+    showToast('Profile deleted', 'success');
+  });
+
+  selectPreset.addEventListener('change', () => {
+    const name = selectPreset.value;
+    if (name === 'default') {
+      btnReset.click();
+    } else {
+      const p = loadProfiles()[name];
+      if (p) {
+        valWidth.value = p.w; rangeWidth.value = p.w;
+        valHeight.value = p.h; rangeHeight.value = p.h;
+        valColor1.value = p.c1;
+        valColor2.value = p.c2;
+        valSquare.value = p.sq; rangeSquare.value = p.sq;
+        drawCheckerboard();
+      }
+    }
+  });
+
+  btnReset.addEventListener('click', () => {
+    valWidth.value = 1920; rangeWidth.value = 1920;
+    valHeight.value = 1080; rangeHeight.value = 1080;
+    valColor1.value = '#d1d5db';
+    valColor2.value = '#9ca3af';
+    valSquare.value = 60; rangeSquare.value = 60;
+    selectPreset.value = 'default';
+    drawCheckerboard();
+  });
+
+  // Export
+  btnSave.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = `checkerboard_${valWidth.value}x${valHeight.value}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('Image saved', 'success');
+  });
+
+  btnCopy.addEventListener('click', () => {
+    canvas.toBlob(blob => {
+      try {
+        const item = new ClipboardItem({ 'image/png': blob });
+        navigator.clipboard.write([item]).then(() => {
+          showToast('Copied to clipboard!', 'success');
+        }).catch(err => {
+          showToast('Clipboard copy failed.', 'error');
+        });
+      } catch (err) {
+        showToast('Clipboard API error.', 'error');
+      }
+    });
+  });
+
+  // Initial
+  drawCheckerboard();
+  fitZoomToScreen(1920, 1080);
+}
