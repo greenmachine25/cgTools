@@ -164,6 +164,8 @@ const tabContentCustom = document.getElementById('tab-content-custom');
 const selectPreset = document.getElementById('select-preset');
 const rangeColorLimit = document.getElementById('range-color-limit');
 const valColorLimit = document.getElementById('val-color-limit');
+const rangeColorTolerance = document.getElementById('range-color-tolerance');
+const valColorTolerance = document.getElementById('val-color-tolerance');
 const paletteColorsPreview = document.getElementById('palette-colors-preview');
 
 const selectDither = document.getElementById('select-dither');
@@ -206,6 +208,7 @@ btnReset.addEventListener('click', () => {
   rangeResolution.value = 256;
   selectPreset.value = 'none';
   rangeColorLimit.value = 30;
+  rangeColorTolerance.value = 0;
   selectDither.value = 'none';
   rangeDitherWeight.value = 80;
   rangeBrightness.value = 0;
@@ -635,6 +638,11 @@ function processImageData(data, width, height) {
     palette = generateKMeansPalette(data, k);
   }
   
+  const tolerance = parseInt(rangeColorTolerance.value) || 0;
+  if (tolerance > 0) {
+    palette = applyColorTolerance(palette, tolerance);
+  }
+  
   // 4. Color Quantization + Dithering
   const ditherType = selectDither.value;
   const ditherWeight = parseInt(rangeDitherWeight.value) / 100;
@@ -719,6 +727,28 @@ function applyAdjustments(data, brightness, contrast, saturation) {
 }
 
 // Fast K-Means Palette Generation
+function applyColorTolerance(palette, tolerancePercent) {
+  if (tolerancePercent <= 0) return palette;
+  const maxDistSq = Math.pow(441.67 * (tolerancePercent / 100), 2);
+  let mergedPalette = [];
+  
+  for (let c of palette) {
+    let found = false;
+    for (let mc of mergedPalette) {
+      const distSq = (c[0]-mc[0])**2 + (c[1]-mc[1])**2 + (c[2]-mc[2])**2;
+      if (distSq <= maxDistSq) {
+        mc[0] = Math.round((mc[0] + c[0]) / 2);
+        mc[1] = Math.round((mc[1] + c[1]) / 2);
+        mc[2] = Math.round((mc[2] + c[2]) / 2);
+        found = true;
+        break;
+      }
+    }
+    if (!found) mergedPalette.push([...c]);
+  }
+  return mergedPalette;
+}
+
 function generateKMeansPalette(pixels, k) {
   const samples = [];
   const step = Math.max(1, Math.floor(pixels.length / 4 / 1200)); // Sample ~1200 pixels
@@ -965,6 +995,7 @@ function setupSlidersAndControls() {
   const sliders = [
     { el: rangeResolution, valEl: valResolution },
     { el: rangeColorLimit, valEl: valColorLimit },
+    { el: rangeColorTolerance, valEl: valColorTolerance },
     { el: rangeDitherWeight, valEl: valDitherWeight },
     { el: rangeBrightness, valEl: valBrightness },
     { el: rangeContrast, valEl: valContrast },
@@ -1072,6 +1103,7 @@ function setupSlidersAndControls() {
 function updateSliderLabels() {
   valResolution.value = rangeResolution.value;
   valColorLimit.value = rangeColorLimit.value;
+  valColorTolerance.value = rangeColorTolerance.value;
   valDitherWeight.value = rangeDitherWeight.value;
   valBrightness.value = rangeBrightness.value;
   valContrast.value = rangeContrast.value;
@@ -1338,6 +1370,7 @@ function initSettingsProfiles() {
       presetTab: currentPaletteTab,
       presetSelect: selectPreset.value,
       colorLimit: rangeColorLimit.value,
+      colorTolerance: rangeColorTolerance.value,
       dither: selectDither.value,
       ditherWeight: rangeDitherWeight.value,
       brightness: rangeBrightness.value,
@@ -1403,6 +1436,7 @@ function applyProfile(p) {
     switchPaletteTab('presets');
   } else {
     rangeColorLimit.value = p.colorLimit;
+    rangeColorTolerance.value = p.colorTolerance || 0;
     switchPaletteTab('custom');
   }
   
@@ -1693,7 +1727,7 @@ function initVizProfiles(updateCb) {
 }
 
 // Check for updates every 60s
-const CURRENT_VERSION = 'v0.27';
+const CURRENT_VERSION = 'v0.28';
 function checkForUpdates() {
   fetch('./index.html?t=' + Date.now())
     .then(r => r.text())
