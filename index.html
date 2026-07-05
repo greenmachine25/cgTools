@@ -20,7 +20,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
   
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="./styles.css?v=0.18">
+  <link rel="stylesheet" href="./styles.css?v=0.19">
 </head>
 <body>
   <!-- Update Notification Banner -->
@@ -42,7 +42,7 @@
       <div class="header-brand">
         <img src="./logo.svg" alt="cgTools Logo" class="brand-logo">
         <div class="brand-text">
-          <h1>cgTools <span class="app-version">v0.18</span></h1>
+          <h1>cgTools <span class="app-version">v0.19</span></h1>
           <span class="brand-tagline">creative &amp; time-saving utilities</span>
         </div>
       </div>
@@ -174,23 +174,28 @@
         </aside>
 
         <!-- Visualizer Workspace Panel -->
-        <div class="workspace-panel">
-          <!-- Zoom Controls -->
-          <div class="zoom-controls">
-            <button id="btn-viz-zoom-out" class="btn-zoom" title="Zoom Out">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            </button>
-            <button id="btn-viz-zoom-reset" class="btn-zoom-text" title="Reset Zoom">100%</button>
-            <button id="btn-viz-zoom-in" class="btn-zoom" title="Zoom In">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            </button>
-          </div>
-          
-          <!-- Scrollable area that centers the content -->
-          <div style="width: 100%; height: 100%; overflow: auto; display: flex; align-items: center; justify-content: center; position: relative;">
+        <section class="workspace-area">
+          <div class="workspace-editor-container" style="display: flex; flex-direction: column;">
             
-            <!-- Scalable Container for the SVG -->
-            <div id="viz-svg-container" style="background: #000; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; position: relative; transition: transform 0.2s; transform-origin: center center;">
+            <!-- Toolbar for Zoom -->
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+              <div class="zoom-controls">
+                <button id="btn-viz-zoom-out" class="btn-zoom" title="Zoom Out">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+                <button id="btn-viz-zoom-reset" class="btn-zoom-text" title="Reset Zoom">100%</button>
+                <button id="btn-viz-zoom-in" class="btn-zoom" title="Zoom In">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+              </div>
+            </div>
+            
+            <!-- Workspace Card containing the SVG -->
+            <div class="workspace-card">
+              <div class="workspace-viewport" style="display: flex; align-items: center; justify-content: center; position: relative; overflow: auto;">
+                
+                <!-- Scalable Container for the SVG -->
+                <div id="viz-svg-container" style="background: #000; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; position: relative; transition: transform 0.2s; transform-origin: center center;">
               <svg id="viz-svg" style="display: block; width: 100%; height: 100%;" preserveAspectRatio="none">
                 <defs>
                   <pattern id="viz-grid" width="16" height="16" patternUnits="userSpaceOnUse">
@@ -213,8 +218,11 @@
                 <rect id="viz-char" x="145" y="76" width="30" height="50" fill="rgba(255, 75, 100, 0.2)" stroke="rgba(255, 75, 100, 1)" stroke-width="2" rx="2" />
               </svg>
             </div>
+            
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
       </div>
       
       <!-- Pixel Art Converter Tool -->
@@ -539,7 +547,7 @@
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
   </div>
-  <script src="app.js?v=0.18"></script>
+  <script src="app.js?v=0.19"></script>
   <script>
     // Offline status detection
     const offlineIndicator = document.getElementById('offline-indicator');
