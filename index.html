@@ -76,8 +76,8 @@
           <!-- Image Upload / Dropzone Section -->
           <section class="settings-group">
             <h3 class="group-title">1. Upload Image</h3>
+            <input type="file" id="file-input" accept="image/*" class="file-input-hidden">
             <div id="dropzone" class="upload-dropzone">
-              <input type="file" id="file-input" accept="image/*" class="file-input-hidden">
               <div class="dropzone-content">
                 <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" class="upload-icon">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
@@ -100,14 +100,14 @@
           <!-- Resolution / Pixel Settings -->
           <section class="settings-group">
             <div class="group-title-with-value">
-              <h3 class="group-title">2. Pixel Size</h3>
-              <span id="val-pixel-size" class="group-value">8px</span>
+              <h3 class="group-title">2. Target Resolution (Width)</h3>
+              <span id="val-resolution" class="group-value">64px</span>
             </div>
             <div class="range-container">
-              <input type="range" id="range-pixel-size" min="2" max="64" value="8" step="1" class="slider">
+              <input type="range" id="range-resolution" min="8" max="256" value="64" step="8" class="slider">
               <div class="range-labels">
-                <span>Fine (2px)</span>
-                <span>Chunky (64px)</span>
+                <span>Retro (8px)</span>
+                <span>High Detail (256px)</span>
               </div>
             </div>
           </section>
@@ -266,30 +266,33 @@
         <div id="workspace-editor" class="workspace-editor-container hidden">
           <div class="workspace-card">
             
-            <!-- Comparison Slider -->
-            <div id="comparison-slider" class="comparison-slider-container">
-              <!-- Before Image (Source) - Left side -->
-              <div class="slider-panel before-panel">
-                <canvas id="canvas-before"></canvas>
-                <div class="panel-tag before-tag">Original</div>
-              </div>
-              
-              <!-- After Image (Result) - Right side (slides over before) -->
-              <div class="slider-panel after-panel" id="after-panel">
-                <canvas id="canvas-after"></canvas>
-                <div class="panel-tag after-tag">Pixel Art</div>
-              </div>
-              
-              <!-- Resize/Drag Handle -->
-              <div id="slider-handle" class="slider-handle">
-                <div class="handle-line"></div>
-                <div class="handle-button">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <polyline points="8 5 3 10 8 15"/>
-                    <polyline points="16 5 21 10 16 15"/>
-                  </svg>
+            <!-- Viewport for Zoom & Pan -->
+            <div class="workspace-viewport">
+              <!-- Comparison Slider -->
+              <div id="comparison-slider" class="comparison-slider-container">
+                <!-- Before Image (Source) - Left side -->
+                <div class="slider-panel before-panel">
+                  <canvas id="canvas-before"></canvas>
+                  <div class="panel-tag before-tag">Original</div>
                 </div>
-                <div class="handle-line"></div>
+                
+                <!-- After Image (Result) - Right side (slides over before) -->
+                <div class="slider-panel after-panel" id="after-panel">
+                  <canvas id="canvas-after"></canvas>
+                  <div class="panel-tag after-tag">Pixel Art</div>
+                </div>
+                
+                <!-- Resize/Drag Handle -->
+                <div id="slider-handle" class="slider-handle">
+                  <div class="handle-line"></div>
+                  <div class="handle-button">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="8 5 3 10 8 15"/>
+                      <polyline points="16 5 21 10 16 15"/>
+                    </svg>
+                  </div>
+                  <div class="handle-line"></div>
+                </div>
               </div>
             </div>
 
@@ -300,8 +303,21 @@
                 <span class="status-separator">|</span>
                 <span id="status-colors-used">Calculating colors...</span>
               </div>
+              
+              <!-- Zoom Controls -->
+              <div class="zoom-controls">
+                <button id="btn-zoom-out" class="btn-zoom" title="Zoom Out">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <span id="zoom-level-label">100%</span>
+                <button id="btn-zoom-in" class="btn-zoom" title="Zoom In">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <button id="btn-zoom-reset" class="btn-zoom-text" title="Fit Zoom">Fit</button>
+              </div>
+
               <div class="status-right">
-                <span>Hold spacebar to see original image</span>
+                <span>Hold space + drag to Pan | Wheel to Zoom</span>
               </div>
             </div>
 

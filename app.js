@@ -111,8 +111,8 @@ const afterPanel = document.getElementById('after-panel');
 const sliderHandle = document.getElementById('slider-handle');
 
 // Sliders and Selects
-const rangePixelSize = document.getElementById('range-pixel-size');
-const valPixelSize = document.getElementById('val-pixel-size');
+const rangeResolution = document.getElementById('range-resolution');
+const valResolution = document.getElementById('val-resolution');
 
 const tabPresets = document.getElementById('tab-presets');
 const tabCustom = document.getElementById('tab-custom');
@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Reset logic
 btnReset.addEventListener('click', () => {
-  rangePixelSize.value = 8;
+  rangeResolution.value = 64;
   selectPreset.value = 'gb-classic';
   rangeColorLimit.value = 16;
   selectDither.value = 'bayer-4x4';
@@ -186,11 +186,10 @@ btnDownload.addEventListener('click', () => {
   // Run high-resolution render asynchronously so UI doesn't freeze
   setTimeout(() => {
     try {
-      const pixelSize = parseInt(rangePixelSize.value);
-      
-      // Calculate true output size (original dimensions divided by pixel size)
-      const downloadPixelatedW = Math.max(2, Math.round(sourceImage.width / pixelSize));
-      const downloadPixelatedH = Math.max(2, Math.round(sourceImage.height / pixelSize));
+      const targetWidth = parseInt(rangeResolution.value);
+      const ratio = sourceImage.width / sourceImage.height;
+      const downloadPixelatedW = targetWidth;
+      const downloadPixelatedH = Math.max(2, Math.round(targetWidth / ratio));
       
       // Create offscreen high-res canvases
       const smallCanvas = document.createElement('canvas');
@@ -206,10 +205,10 @@ btnDownload.addEventListener('click', () => {
       processImageData(imgData.data, downloadPixelatedW, downloadPixelatedH);
       smallCtx.putImageData(imgData, 0, 0);
       
-      // Upscale back to full size for sharp download
+      // Upscale back to full size (original uploaded dimensions) for sharp download
       const exportCanvas = document.createElement('canvas');
-      exportCanvas.width = downloadPixelatedW * pixelSize;
-      exportCanvas.height = downloadPixelatedH * pixelSize;
+      exportCanvas.width = sourceImage.width;
+      exportCanvas.height = sourceImage.height;
       const exportCtx = exportCanvas.getContext('2d');
       
       exportCtx.imageSmoothingEnabled = false;
@@ -245,10 +244,8 @@ btnDownload.addEventListener('click', () => {
 function setupUploadListeners() {
   // Click dropzone to browse
   btnBrowseTrigger.addEventListener('click', () => fileInput.click());
-  dropzone.addEventListener('click', (e) => {
-    if (e.target !== btnBrowseTrigger && e.target !== document.querySelector('.browse-link')) {
-      fileInput.click();
-    }
+  dropzone.addEventListener('click', () => {
+    fileInput.click();
   });
 
   fileInput.addEventListener('change', (e) => {
@@ -473,8 +470,9 @@ function setupWorkspace() {
   // Draw before canvas
   ctxBefore.drawImage(sourceImage, 0, 0, previewW, previewH);
   
-  // Reset slider handle to center
+  // Reset slider handle to center and reset zoom/pan
   updateSlider(50);
+  resetZoomPan();
   
   // Run pixel art conversion
   runPipeline();
@@ -497,13 +495,14 @@ function runPipeline() {
   if (!sourceImage) return;
   
   const startTime = performance.now();
-  const pixelSize = parseInt(rangePixelSize.value);
+  const targetWidth = parseInt(rangeResolution.value);
   const w = canvasAfter.width;
   const h = canvasAfter.height;
+  const ratio = w / h;
   
-  // Calculate small processing width/height
-  const pixelatedW = Math.max(2, Math.round(w / pixelSize));
-  const pixelatedH = Math.max(2, Math.round(h / pixelSize));
+  // Calculate small processing width/height based on target resolution width
+  const pixelatedW = targetWidth;
+  const pixelatedH = Math.max(2, Math.round(targetWidth / ratio));
   
   // Update status bar resolution
   statusResolution.textContent = `${sourceImage.width} × ${sourceImage.height} px (${pixelatedW} × ${pixelatedH} blocks)`;
@@ -903,7 +902,7 @@ function countUniqueColors(data) {
 
 function setupSlidersAndControls() {
   const sliders = [
-    { el: rangePixelSize, valEl: valPixelSize, suffix: 'px' },
+    { el: rangeResolution, valEl: valResolution, suffix: 'px' },
     { el: rangeColorLimit, valEl: valColorLimit, suffix: ' colors' },
     { el: rangeDitherWeight, valEl: valDitherWeight, suffix: '%' },
     { el: rangeBrightness, valEl: valBrightness, suffix: '%' },
@@ -942,7 +941,7 @@ function setupSlidersAndControls() {
 }
 
 function updateSliderLabels() {
-  valPixelSize.textContent = `${rangePixelSize.value}px`;
+  valResolution.textContent = `${rangeResolution.value}px`;
   valColorLimit.textContent = `${rangeColorLimit.value} colors`;
   valDitherWeight.textContent = `${rangeDitherWeight.value}%`;
   valBrightness.textContent = `${rangeBrightness.value}%`;
@@ -999,12 +998,35 @@ function renderPalettePreview() {
    Interactive Comparison Slider & Keyboard Shortcuts
    ========================================================================== */
 
+// Zoom & Pan Variables
+let zoom = 1.0;
+let panX = 0;
+let panY = 0;
+let isPanning = false;
+let startPanX = 0;
+let startPanY = 0;
+
+function applyZoomPan() {
+  zoom = Math.max(0.5, Math.min(10.0, zoom));
+  comparisonSlider.style.transform = `scale(${zoom}) translate(${panX}px, ${panY}px)`;
+  document.getElementById('zoom-level-label').textContent = `${Math.round(zoom * 100)}%`;
+}
+
+function resetZoomPan() {
+  zoom = 1.0;
+  panX = 0;
+  panY = 0;
+  applyZoomPan();
+}
+
 function setupComparisonSlider() {
   let isDragging = false;
 
   function onDragStart(e) {
-    isDragging = true;
-    e.preventDefault();
+    if (e.button === 0 && !spacePressed) {
+      isDragging = true;
+      e.preventDefault();
+    }
   }
 
   function onDragEnd() {
@@ -1012,17 +1034,16 @@ function setupComparisonSlider() {
   }
 
   function onDrag(e) {
-    if (!isDragging || !sourceImage) return;
+    if (!isDragging || !sourceImage || isPanning) return;
     
     const rect = comparisonSlider.getBoundingClientRect();
     let clientX = e.clientX;
     
-    // Touch support
     if (e.touches && e.touches.length > 0) {
       clientX = e.touches[0].clientX;
     }
     
-    const x = clientX - rect.left;
+    const x = (clientX - rect.left);
     const percent = (x / rect.width) * 100;
     updateSlider(percent);
   }
@@ -1036,6 +1057,62 @@ function setupComparisonSlider() {
   comparisonSlider.addEventListener('touchstart', onDragStart, { passive: true });
   window.addEventListener('touchend', onDragEnd);
   window.addEventListener('touchmove', onDrag, { passive: true });
+
+  // Pan controls mouse listeners (Right click, middle click, or Left click + Space)
+  comparisonSlider.addEventListener('contextmenu', (e) => e.preventDefault()); // prevent right click menu
+  
+  comparisonSlider.addEventListener('mousedown', (e) => {
+    if (e.button === 1 || e.button === 2 || (e.button === 0 && spacePressed)) {
+      isPanning = true;
+      startPanX = e.clientX - panX * zoom;
+      startPanY = e.clientY - panY * zoom;
+      comparisonSlider.style.cursor = 'grabbing';
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true); // use capture to intercept handles
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isPanning) return;
+    panX = (e.clientX - startPanX) / zoom;
+    panY = (e.clientY - startPanY) / zoom;
+    applyZoomPan();
+    e.preventDefault();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isPanning) {
+      isPanning = false;
+      comparisonSlider.style.cursor = 'ew-resize';
+    }
+  });
+
+  // Wheel zoom listener
+  comparisonSlider.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = 0.1;
+    if (e.deltaY < 0) {
+      zoom += zoomFactor;
+    } else {
+      zoom -= zoomFactor;
+    }
+    applyZoomPan();
+  }, { passive: false });
+
+  // Setup toolbar zoom buttons
+  document.getElementById('btn-zoom-in').addEventListener('click', () => {
+    zoom += 0.25;
+    applyZoomPan();
+  });
+
+  document.getElementById('btn-zoom-out').addEventListener('click', () => {
+    zoom -= 0.25;
+    applyZoomPan();
+  });
+
+  document.getElementById('btn-zoom-reset').addEventListener('click', () => {
+    resetZoomPan();
+  });
 }
 
 function updateSlider(percent) {
@@ -1053,7 +1130,6 @@ function updateSlider(percent) {
 function setupGlobalShortcuts() {
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && !spacePressed && sourceImage) {
-      // If user is focused on an input/select, don't hijack keyboard space
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
         return;
       }
@@ -1062,6 +1138,7 @@ function setupGlobalShortcuts() {
       
       // Temporarily hide pixel art by sliding handle to 100% (reveals only original left panel)
       updateSlider(100);
+      comparisonSlider.style.cursor = 'grab';
     }
   });
 
@@ -1070,6 +1147,7 @@ function setupGlobalShortcuts() {
       spacePressed = false;
       // Restore previous handle percentage
       updateSlider(originalSliderPercent);
+      comparisonSlider.style.cursor = 'ew-resize';
     }
   });
 }
