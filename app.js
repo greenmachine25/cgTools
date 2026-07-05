@@ -106,6 +106,10 @@ const canvasAfter = document.getElementById('canvas-after');
 const ctxBefore = canvasBefore.getContext('2d');
 const ctxAfter = canvasAfter.getContext('2d');
 
+// Global processing canvas to prevent GC memory thrashing
+const pipelineCanvas = document.createElement('canvas');
+const pipelineCtx = pipelineCanvas.getContext('2d', { willReadFrequently: true });
+
 const comparisonSlider = document.getElementById('comparison-slider');
 const afterPanel = document.getElementById('after-panel');
 const sliderHandle = document.getElementById('slider-handle');
@@ -571,15 +575,13 @@ function runPipeline() {
   // Update status bar resolution
   statusResolution.textContent = `${sourceImage.width} × ${sourceImage.height} px (${pixelatedW} × ${pixelatedH} blocks)`;
   
-  // Create small offscreen canvas to scale down
-  const smallCanvas = document.createElement('canvas');
-  smallCanvas.width = pixelatedW;
-  smallCanvas.height = pixelatedH;
-  const smallCtx = smallCanvas.getContext('2d');
+  // Use global pipeline canvas to prevent GC thrash on rapid slider changes
+  pipelineCanvas.width = pixelatedW;
+  pipelineCanvas.height = pixelatedH;
   
   // Draw the before-canvas contents scaled down
-  smallCtx.drawImage(canvasBefore, 0, 0, pixelatedW, pixelatedH);
-  const imgData = smallCtx.getImageData(0, 0, pixelatedW, pixelatedH);
+  pipelineCtx.drawImage(canvasBefore, 0, 0, pixelatedW, pixelatedH);
+  const imgData = pipelineCtx.getImageData(0, 0, pixelatedW, pixelatedH);
   
   // Process colors/dithering on raw downscaled pixel array
   const uniqueColorCount = processImageData(imgData.data, pixelatedW, pixelatedH);
@@ -588,7 +590,7 @@ function runPipeline() {
   statusColorsUsed.textContent = `${uniqueColorCount} unique colors used`;
   
   // Put data back and render to preview canvas
-  smallCtx.putImageData(imgData, 0, 0);
+  pipelineCtx.putImageData(imgData, 0, 0);
   
   ctxAfter.imageSmoothingEnabled = false;
   ctxAfter.mozImageSmoothingEnabled = false;
@@ -596,7 +598,7 @@ function runPipeline() {
   ctxAfter.msImageSmoothingEnabled = false;
   
   ctxAfter.clearRect(0, 0, w, h);
-  ctxAfter.drawImage(smallCanvas, 0, 0, w, h);
+  ctxAfter.drawImage(pipelineCanvas, 0, 0, w, h);
   
   const timeTaken = (performance.now() - startTime).toFixed(1);
   console.log(`Pipeline complete in ${timeTaken}ms`);
@@ -1727,7 +1729,7 @@ function initVizProfiles(updateCb) {
 }
 
 // Check for updates every 60s
-const CURRENT_VERSION = 'v0.28';
+const CURRENT_VERSION = 'v0.29';
 function checkForUpdates() {
   fetch('./index.html?t=' + Date.now())
     .then(r => r.text())
