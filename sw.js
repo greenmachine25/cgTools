@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cgtools-cache-v0.17';
+const CACHE_NAME = 'cgtools-cache-v0.18';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

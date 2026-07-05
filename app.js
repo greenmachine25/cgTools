@@ -1463,10 +1463,6 @@ function initVisualizer() {
     vizChar.setAttribute('x', charX);
     vizChar.setAttribute('y', charY);
     
-    // Set actual container size for zooming
-    vizSvgContainer.style.width = `${w}px`;
-    vizSvgContainer.style.height = `${h}px`;
-    
     // 3. Update Tileset Grid / Ground
     const tileSize = parseInt(valTileSize.value) || 16;
     
@@ -1563,6 +1559,17 @@ function initVisualizer() {
     vizSvgContainer.style.transform = `scale(${currentVizZoom})`;
     btnVizZoomReset.textContent = `${Math.round(currentVizZoom * 100)}%`;
   };
+  
+  const fitZoomToScreen = (w, h) => {
+    // Attempt to fill an 800x500 area
+    const scaleX = 800 / w;
+    const scaleY = 500 / h;
+    let targetZoom = Math.min(scaleX, scaleY);
+    // Round to nearest 0.25
+    targetZoom = Math.max(0.5, Math.floor(targetZoom * 4) / 4);
+    currentVizZoom = targetZoom;
+    updateVizZoom();
+  };
 
   btnVizZoomIn.addEventListener('click', () => {
     currentVizZoom += 0.25;
@@ -1583,7 +1590,15 @@ function initVisualizer() {
 
   // Initial draw
   updateVisualizer();
-  updateVizZoom();
+  
+  // Fit to screen on initial load
+  const initialRes = selectVizRes.value;
+  if (initialRes) {
+    const [w, h] = initialRes.split(',').map(Number);
+    fitZoomToScreen(w, h);
+  } else {
+    updateVizZoom();
+  }
 }
 
 function initVizProfiles(updateCb) {
@@ -1672,7 +1687,7 @@ function initVizProfiles(updateCb) {
 }
 
 // Check for updates every 60s
-const CURRENT_VERSION = 'v0.17';
+const CURRENT_VERSION = 'v0.18';
 function checkForUpdates() {
   fetch('./index.html?t=' + Date.now())
     .then(r => r.text())
