@@ -133,6 +133,17 @@ const vizChar = document.getElementById('viz-char');
 const vizResLabel = document.getElementById('viz-res-label');
 const vizGridPattern = document.getElementById('viz-grid');
 const vizGridSolidPattern = document.getElementById('viz-grid-solid');
+const vizSvgContainer = document.getElementById('viz-svg-container');
+
+// Visualizer Zoom Controls
+const btnVizZoomIn = document.getElementById('btn-viz-zoom-in');
+const btnVizZoomOut = document.getElementById('btn-viz-zoom-out');
+const btnVizZoomReset = document.getElementById('btn-viz-zoom-reset');
+
+// Visualizer Sliders
+const rangeCharWidth = document.getElementById('range-char-width');
+const rangeCharHeight = document.getElementById('range-char-height');
+const rangeTileSize = document.getElementById('range-tile-size');
 
 // Settings Profiles (Visualizer)
 const selectVizPreset = document.getElementById('select-viz-preset');
@@ -1450,6 +1461,10 @@ function initVisualizer() {
     vizChar.setAttribute('x', charX);
     vizChar.setAttribute('y', charY);
     
+    // Set actual container size for zooming
+    vizSvgContainer.style.width = `${w}px`;
+    vizSvgContainer.style.height = `${h}px`;
+    
     // 3. Update Tileset Grid / Ground
     const tileSize = parseInt(valTileSize.value) || 16;
     
@@ -1474,14 +1489,37 @@ function initVisualizer() {
     vizGridSolidPattern.querySelector('rect').setAttribute('height', tileSize);
   };
   
-  // Setup listeners for updates
   selectVizRes.addEventListener('change', updateVisualizer);
-  valCharWidth.addEventListener('input', updateVisualizer);
-  valCharHeight.addEventListener('input', updateVisualizer);
-  valTileSize.addEventListener('input', updateVisualizer);
+
+  // Slider & Input syncing
+  const setupVizSlider = (rangeEl, valEl) => {
+    // When range changes
+    rangeEl.addEventListener('input', () => {
+      valEl.value = rangeEl.value;
+      updateVisualizer();
+    });
+    // When number changes
+    valEl.addEventListener('input', () => {
+      let val = parseInt(valEl.value);
+      if (isNaN(val)) return;
+      const min = parseInt(rangeEl.min) || 1;
+      const max = parseInt(rangeEl.max) || 256;
+      if (val < min) val = min;
+      if (val > max) val = max;
+      rangeEl.value = val;
+      updateVisualizer();
+    });
+    valEl.addEventListener('blur', () => {
+      valEl.value = rangeEl.value;
+    });
+  };
+
+  setupVizSlider(rangeCharWidth, valCharWidth);
+  setupVizSlider(rangeCharHeight, valCharHeight);
+  setupVizSlider(rangeTileSize, valTileSize);
   
   // Custom spin controls for Visualizer inputs
-  const setupSpinControls = (inputEl) => {
+  const setupSpinControls = (inputEl, rangeEl) => {
     const container = inputEl.closest('.input-with-suffix');
     if (container && !container.querySelector('.spin-controls')) {
       const spinControls = document.createElement('div');
@@ -1504,6 +1542,7 @@ function initVisualizer() {
         if (val > max) val = max;
         
         inputEl.value = val;
+        rangeEl.value = val;
         updateVisualizer();
       };
 
@@ -1512,14 +1551,37 @@ function initVisualizer() {
     }
   };
   
-  setupSpinControls(valCharWidth);
-  setupSpinControls(valCharHeight);
-  setupSpinControls(valTileSize);
+  setupSpinControls(valCharWidth, rangeCharWidth);
+  setupSpinControls(valCharHeight, rangeCharHeight);
+  setupSpinControls(valTileSize, rangeTileSize);
+
+  // Zoom Logic
+  let currentVizZoom = 1;
+  const updateVizZoom = () => {
+    vizSvgContainer.style.transform = `scale(${currentVizZoom})`;
+    btnVizZoomReset.textContent = `${Math.round(currentVizZoom * 100)}%`;
+  };
+
+  btnVizZoomIn.addEventListener('click', () => {
+    currentVizZoom += 0.25;
+    updateVizZoom();
+  });
+
+  btnVizZoomOut.addEventListener('click', () => {
+    currentVizZoom = Math.max(0.25, currentVizZoom - 0.25);
+    updateVizZoom();
+  });
+
+  btnVizZoomReset.addEventListener('click', () => {
+    currentVizZoom = 1;
+    updateVizZoom();
+  });
 
   initVizProfiles(updateVisualizer);
 
   // Initial draw
   updateVisualizer();
+  updateVizZoom();
 }
 
 function initVizProfiles(updateCb) {

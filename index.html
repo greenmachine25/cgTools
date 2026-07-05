@@ -42,7 +42,7 @@
       <div class="header-brand">
         <img src="./logo.svg" alt="cgTools Logo" class="brand-logo">
         <div class="brand-text">
-          <h1>cgTools <span class="app-version">v0.14</span></h1>
+          <h1>cgTools <span class="app-version">v0.15</span></h1>
           <span class="brand-tagline">creative &amp; time-saving utilities</span>
         </div>
       </div>
@@ -142,6 +142,7 @@
                     <span class="val-suffix">px</span>
                   </div>
                 </div>
+                <input type="range" id="range-char-width" min="1" max="256" value="30" step="1" class="slider">
               </div>
               <div class="range-container">
                 <div class="range-header-compact">
@@ -151,6 +152,7 @@
                     <span class="val-suffix">px</span>
                   </div>
                 </div>
+                <input type="range" id="range-char-height" min="1" max="256" value="50" step="1" class="slider">
               </div>
             </section>
 
@@ -165,39 +167,52 @@
                     <span class="val-suffix">px</span>
                   </div>
                 </div>
+                <input type="range" id="range-tile-size" min="8" max="128" value="16" step="1" class="slider">
               </div>
             </section>
           </div>
         </aside>
 
         <!-- Visualizer Workspace Panel -->
-        <div class="workspace-panel" style="display: flex; align-items: center; justify-content: center; background-color: var(--bg-primary);">
-          <!-- Container for the SVG that forces 16:9 aspect ratio scaling -->
-          <div style="width: 100%; max-width: 1000px; aspect-ratio: 16/9; background: #000; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; position: relative;">
-            <svg id="viz-svg" viewBox="0 0 320 180" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-              <defs>
-                <pattern id="viz-grid" width="16" height="16" patternUnits="userSpaceOnUse">
-                  <rect width="16" height="16" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
-                </pattern>
-                <pattern id="viz-grid-solid" width="16" height="16" patternUnits="userSpaceOnUse">
-                  <rect width="16" height="16" fill="none" stroke="var(--accent-lime)" stroke-width="0.5"/>
-                </pattern>
-              </defs>
-              
-              <!-- Background grid (subtle) -->
-              <rect width="100%" height="100%" fill="url(#viz-grid)" />
-              
-              <!-- Ground Area (fills bottom portion) -->
-              <rect id="viz-ground" x="0" y="126" width="320" height="100%" fill="rgba(163, 230, 53, 0.05)" stroke="var(--accent-lime)" stroke-width="1" />
-              <!-- Ground Tileset Grid -->
-              <rect id="viz-ground-grid" x="0" y="126" width="320" height="100%" fill="url(#viz-grid-solid)" />
-              
-              <!-- Character Box (Standing on ground) -->
-              <rect id="viz-char" x="145" y="76" width="30" height="50" fill="rgba(255, 75, 100, 0.2)" stroke="rgba(255, 75, 100, 1)" stroke-width="2" rx="2" />
-              
-              <!-- Labels -->
-              <text id="viz-res-label" x="8" y="16" fill="rgba(255,255,255,0.3)" font-family="monospace" font-size="8">320x180</text>
-            </svg>
+        <div class="workspace-panel">
+          <!-- Zoom Controls -->
+          <div class="zoom-controls">
+            <button id="btn-viz-zoom-out" class="btn-zoom" title="Zoom Out">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+            <button id="btn-viz-zoom-reset" class="btn-zoom-text" title="Reset Zoom">100%</button>
+            <button id="btn-viz-zoom-in" class="btn-zoom" title="Zoom In">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+          </div>
+          
+          <!-- Scrollable area that centers the content -->
+          <div style="width: 100%; height: 100%; overflow: auto; display: flex; align-items: center; justify-content: center; position: relative;">
+            
+            <!-- Scalable Container for the SVG -->
+            <div id="viz-svg-container" style="background: #000; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; position: relative; transition: transform 0.2s; transform-origin: center center;">
+              <svg id="viz-svg" style="display: block; width: 100%; height: 100%;" preserveAspectRatio="none">
+                <defs>
+                  <pattern id="viz-grid" width="16" height="16" patternUnits="userSpaceOnUse">
+                    <rect width="16" height="16" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                  </pattern>
+                  <pattern id="viz-grid-solid" width="16" height="16" patternUnits="userSpaceOnUse">
+                    <rect width="16" height="16" fill="none" stroke="var(--accent-lime)" stroke-width="0.5"/>
+                  </pattern>
+                </defs>
+                
+                <!-- Background grid (subtle) -->
+                <rect width="100%" height="100%" fill="url(#viz-grid)" />
+                
+                <!-- Ground Area (fills bottom portion) -->
+                <rect id="viz-ground" x="0" y="126" width="320" height="100%" fill="rgba(163, 230, 53, 0.05)" stroke="var(--accent-lime)" stroke-width="1" />
+                <!-- Ground Tileset Grid -->
+                <rect id="viz-ground-grid" x="0" y="126" width="320" height="100%" fill="url(#viz-grid-solid)" />
+                
+                <!-- Character Box (Standing on ground) -->
+                <rect id="viz-char" x="145" y="76" width="30" height="50" fill="rgba(255, 75, 100, 0.2)" stroke="rgba(255, 75, 100, 1)" stroke-width="2" rx="2" />
+              </svg>
+            </div>
           </div>
         </div>
       </div>

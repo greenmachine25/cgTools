@@ -548,6 +548,11 @@ body {
   box-shadow: 0 0 8px rgba(163, 230, 53, 0.2);
 }
 
+.custom-select option {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
 .select-container::after {
   content: "";
   position: absolute;
