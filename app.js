@@ -932,6 +932,40 @@ function setupSlidersAndControls() {
 
   // Set up listeners for updating numbers next to range sliders
   sliders.forEach(slider => {
+    // Inject spin controls if this is an input
+    if (slider.valEl.tagName === 'INPUT') {
+      const container = slider.valEl.closest('.input-with-suffix');
+      if (container && !container.querySelector('.spin-controls')) {
+        const spinControls = document.createElement('div');
+        spinControls.className = 'spin-controls';
+        spinControls.innerHTML = `
+          <button class="spin-up">▲</button>
+          <button class="spin-down">▼</button>
+        `;
+        container.appendChild(spinControls);
+
+        const btnUp = spinControls.querySelector('.spin-up');
+        const btnDown = spinControls.querySelector('.spin-down');
+
+        const stepVal = (dir) => {
+          let val = parseInt(slider.valEl.value) || 0;
+          val += dir;
+          
+          const min = parseInt(slider.valEl.min);
+          const max = parseInt(slider.valEl.max);
+          if (val < min) val = min;
+          if (val > max) val = max;
+          
+          slider.valEl.value = val;
+          slider.el.value = val;
+          triggerPipeline();
+        };
+
+        btnUp.addEventListener('click', () => stepVal(1));
+        btnDown.addEventListener('click', () => stepVal(-1));
+      }
+    }
+
     // When range slider changes, update number input
     slider.el.addEventListener('input', () => {
       slider.valEl.value = slider.el.value;
@@ -1332,7 +1366,7 @@ function applyProfile(p) {
 }
 
 // Check for updates every 60s
-const CURRENT_VERSION = 'v0.11';
+const CURRENT_VERSION = 'v0.12';
 function checkForUpdates() {
   fetch('./index.html?t=' + Date.now())
     .then(r => r.text())
