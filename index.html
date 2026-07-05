@@ -42,7 +42,7 @@
       <div class="header-brand">
         <img src="./logo.svg" alt="cgTools Logo" class="brand-logo">
         <div class="brand-text">
-          <h1>cgTools <span class="app-version">v0.13</span></h1>
+          <h1>cgTools <span class="app-version">v0.14</span></h1>
           <span class="brand-tagline">creative &amp; time-saving utilities</span>
         </div>
       </div>
@@ -272,15 +272,19 @@
             <div class="group-title-with-value">
               <h3 class="group-title">2. Target Resolution (Width)</h3>
               <div class="input-with-suffix">
-                <input type="number" id="val-resolution" class="val-input" value="256" min="8" max="256">
+                <input type="number" id="val-resolution" class="val-input" value="256" min="8" max="720">
                 <span class="val-suffix">px</span>
               </div>
             </div>
             <div class="range-container">
-              <input type="range" id="range-resolution" min="8" max="256" value="256" step="8" class="slider">
+              <input type="range" id="range-resolution" min="8" max="720" value="256" step="8" class="slider">
               <div class="range-labels">
                 <span>Retro (8px)</span>
-                <span>High Detail (256px)</span>
+                <span>High Detail (720px)</span>
+              </div>
+              <div class="quick-btns" style="display: flex; gap: 8px; margin-top: 12px;">
+                <button id="btn-res-320" class="btn-tertiary" style="flex: 1; padding: 4px; font-size: 11px; height: auto;">320px</button>
+                <button id="btn-res-480" class="btn-tertiary" style="flex: 1; padding: 4px; font-size: 11px; height: auto;">480px</button>
               </div>
             </div>
           </section>

@@ -142,6 +142,8 @@ const btnDeleteViz = document.getElementById('btn-delete-viz');
 // Sliders and Selects
 const rangeResolution = document.getElementById('range-resolution');
 const valResolution = document.getElementById('val-resolution');
+const btnRes320 = document.getElementById('btn-res-320');
+const btnRes480 = document.getElementById('btn-res-480');
 
 const tabPresets = document.getElementById('tab-presets');
 const tabCustom = document.getElementById('tab-custom');
@@ -1039,6 +1041,19 @@ function setupSlidersAndControls() {
     }
     triggerPipeline();
   });
+
+  // Quick Resolution Buttons
+  btnRes320.addEventListener('click', () => {
+    rangeResolution.value = 320;
+    valResolution.value = 320;
+    triggerPipeline();
+  });
+  
+  btnRes480.addEventListener('click', () => {
+    rangeResolution.value = 480;
+    valResolution.value = 480;
+    triggerPipeline();
+  });
 }
 
 function updateSliderLabels() {
@@ -1593,7 +1608,7 @@ function initVizProfiles(updateCb) {
 }
 
 // Check for updates every 60s
-const CURRENT_VERSION = 'v0.13';
+const CURRENT_VERSION = 'v0.14';
 function checkForUpdates() {
   fetch('./index.html?t=' + Date.now())
     .then(r => r.text())
