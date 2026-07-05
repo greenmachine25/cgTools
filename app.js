@@ -1687,7 +1687,7 @@ function initVizProfiles(updateCb) {
 }
 
 // Check for updates every 60s
-const CURRENT_VERSION = 'v0.21';
+const CURRENT_VERSION = 'v0.22';
 function checkForUpdates() {
   fetch('./index.html?t=' + Date.now())
     .then(r => r.text())
