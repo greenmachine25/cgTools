@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cgtools-cache-v1';
+const CACHE_NAME = 'cgtools-cache-v0.05';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -14,12 +14,19 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('[Service Worker] Caching core offline shell');
-        // Cache assets. We catch errors on individual items so one failed cache doesn't block the whole registration.
+        // Fetch each asset bypass-caching to guarantee latest copy
         return Promise.allSettled(
           ASSETS_TO_CACHE.map(asset => {
-            return cache.add(asset).catch(err => {
-              console.warn(`[Service Worker] Failed to cache initial resource: ${asset}`, err);
-            });
+            return fetch(new Request(asset, { cache: 'reload' }))
+              .then(response => {
+                if (response.ok) {
+                  return cache.put(asset, response);
+                }
+                throw new Error(`Status ${response.status}`);
+              })
+              .catch(err => {
+                console.warn(`[Service Worker] Failed to cache resource: ${asset}`, err);
+              });
           })
         );
       })
