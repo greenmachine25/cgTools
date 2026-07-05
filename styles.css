@@ -1052,6 +1052,66 @@ body {
   user-select: none;
 }
 
+/* Update Banner Styling */
+.update-banner {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-glass);
+  border: 1px solid var(--accent-lime);
+  border-radius: 8px;
+  padding: 10px 20px;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), var(--shadow-glow);
+  animation: slideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  backdrop-filter: blur(var(--blur-amount));
+}
+
+.update-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.update-icon {
+  color: var(--accent-lime);
+  animation: rotateClockwise 3s linear infinite;
+}
+
+.btn-update {
+  background: var(--accent-lime);
+  border: none;
+  color: #000;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  outline: none;
+  margin-left: 4px;
+}
+
+.btn-update:hover {
+  background: #fff;
+  box-shadow: 0 0 10px #fff;
+}
+
+@keyframes slideDown {
+  from { top: -60px; opacity: 0; }
+  to { top: 16px; opacity: 1; }
+}
+
+@keyframes rotateClockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Responsive adjustments */
 @media (max-width: 900px) {
   body {

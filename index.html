@@ -23,6 +23,17 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <!-- Update Notification Banner -->
+  <div id="update-banner" class="update-banner hidden">
+    <div class="update-banner-content">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" class="update-icon">
+        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+      </svg>
+      <span>A new update is ready for cgTools!</span>
+      <button id="btn-update-refresh" class="btn-update">Refresh to Update</button>
+    </div>
+  </div>
+
   <!-- App Container -->
   <div id="app" class="app-layout">
     
@@ -31,7 +42,7 @@
       <div class="header-brand">
         <img src="./logo.svg" alt="cgTools Logo" class="brand-logo">
         <div class="brand-text">
-          <h1>cgTools <span class="app-version">v0.05</span></h1>
+          <h1>cgTools <span class="app-version">v0.06</span></h1>
           <span class="brand-tagline">creative &amp; time-saving utilities</span>
         </div>
       </div>
@@ -352,19 +363,47 @@
     // Register Service Worker for offline PWA support
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        // We use relative path ./sw.js to make it compatible with subfolders like /cgTools/
         navigator.serviceWorker.register('./sw.js')
           .then(reg => {
             console.log('Service Worker registered. Scope:', reg.scope);
-            // Flash a toast for visual confirmation
-            if (window.showToast) {
-              window.showToast('Offline support activated!', 'success');
+            
+            // Check if there is already a waiting service worker
+            if (reg.waiting) {
+              showUpdateBanner(reg.waiting);
             }
+            
+            // Listen for update installs
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  showUpdateBanner(newWorker);
+                }
+              });
+            });
           })
           .catch(err => {
             console.error('Service Worker registration failed:', err);
           });
+
+        // Trigger page refresh when the waiting worker claims control
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshing) return;
+          refreshing = true;
+          window.location.reload();
+        });
       });
+    }
+
+    function showUpdateBanner(worker) {
+      const banner = document.getElementById('update-banner');
+      const refreshBtn = document.getElementById('btn-update-refresh');
+      banner.classList.remove('hidden');
+      
+      refreshBtn.onclick = () => {
+        worker.postMessage({ type: 'SKIP_WAITING' });
+      };
     }
   </script>
 </body>
