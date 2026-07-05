@@ -42,13 +42,20 @@
       <div class="header-brand">
         <img src="./logo.svg" alt="cgTools Logo" class="brand-logo">
         <div class="brand-text">
-          <h1>cgTools <span class="app-version">v0.12</span></h1>
+          <h1>cgTools <span class="app-version">v0.13</span></h1>
           <span class="brand-tagline">creative &amp; time-saving utilities</span>
         </div>
       </div>
       
       <nav class="header-nav">
-        <div class="nav-item active">
+        <div id="nav-visualizer" class="nav-item active" data-target="tool-visualizer">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M3 9h18" />
+          </svg>
+          <span>Visualizer</span>
+        </div>
+        <div id="nav-converter" class="nav-item" data-target="tool-converter">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="7" height="9" rx="1" />
             <rect x="14" y="3" width="7" height="5" rx="1" />
@@ -57,7 +64,6 @@
           </svg>
           <span>Pixel Art Converter</span>
         </div>
-        <!-- Future slots can be added here -->
       </nav>
 
       <div class="header-status">
@@ -68,8 +74,136 @@
       </div>
     </header>
 
-    <!-- Main Workspace -->
-    <main class="app-workspace">
+    <!-- Main Workspaces -->
+    <main>
+      
+      <!-- Visualizer Tool -->
+      <div id="tool-visualizer" class="app-workspace">
+        <!-- Sidebar -->
+        <aside class="settings-sidebar">
+          <div class="sidebar-header">
+            <h2>Visualizer Settings</h2>
+            <button id="btn-reset-viz" class="btn-icon" title="Reset all settings to default">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="sidebar-scroll">
+            <!-- Configuration Presets -->
+            <section class="settings-group" style="padding-bottom: 15px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px;">
+              <h3 class="group-title">Settings Profile</h3>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <div class="select-container" style="flex-grow: 1;">
+                  <select id="select-viz-preset" class="custom-select">
+                    <option value="default">Default</option>
+                  </select>
+                </div>
+                <button id="btn-save-viz" class="btn-icon" title="Save current settings as a new profile" style="padding: 10px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; height: 38px;">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                  </svg>
+                </button>
+                <button id="btn-delete-viz" class="btn-icon" title="Delete current profile" style="padding: 10px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; height: 38px;">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
+            </section>
+
+            <!-- Resolution Settings -->
+            <section class="settings-group">
+              <h3 class="group-title">1. Game Resolution</h3>
+              <div class="select-container">
+                <select id="select-viz-res" class="custom-select">
+                  <option value="256,144">256 x 144 (16:9)</option>
+                  <option value="320,180" selected>320 x 180 (16:9)</option>
+                  <option value="480,270">480 x 270 (16:9)</option>
+                  <option value="640,360">640 x 360 (16:9)</option>
+                  <option value="960,540">960 x 540 (16:9)</option>
+                  <option value="1280,720">1280 x 720 (16:9)</option>
+                </select>
+              </div>
+            </section>
+
+            <!-- Character Size Settings -->
+            <section class="settings-group">
+              <h3 class="group-title">2. Character Sprite</h3>
+              <div class="range-container margin-bottom-sm">
+                <div class="range-header-compact">
+                  <label for="val-char-width">Width</label>
+                  <div class="input-with-suffix">
+                    <input type="number" id="val-char-width" class="val-input" value="30" min="1" max="256">
+                    <span class="val-suffix">px</span>
+                  </div>
+                </div>
+              </div>
+              <div class="range-container">
+                <div class="range-header-compact">
+                  <label for="val-char-height">Height</label>
+                  <div class="input-with-suffix">
+                    <input type="number" id="val-char-height" class="val-input" value="50" min="1" max="256">
+                    <span class="val-suffix">px</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Tileset Settings -->
+            <section class="settings-group">
+              <h3 class="group-title">3. Tileset / Environment</h3>
+              <div class="range-container">
+                <div class="range-header-compact">
+                  <label for="val-tile-size">Grid Size</label>
+                  <div class="input-with-suffix">
+                    <input type="number" id="val-tile-size" class="val-input" value="16" min="8" max="128">
+                    <span class="val-suffix">px</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </aside>
+
+        <!-- Visualizer Workspace Panel -->
+        <div class="workspace-panel" style="display: flex; align-items: center; justify-content: center; background-color: var(--bg-primary);">
+          <!-- Container for the SVG that forces 16:9 aspect ratio scaling -->
+          <div style="width: 100%; max-width: 1000px; aspect-ratio: 16/9; background: #000; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; position: relative;">
+            <svg id="viz-svg" viewBox="0 0 320 180" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <pattern id="viz-grid" width="16" height="16" patternUnits="userSpaceOnUse">
+                  <rect width="16" height="16" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+                </pattern>
+                <pattern id="viz-grid-solid" width="16" height="16" patternUnits="userSpaceOnUse">
+                  <rect width="16" height="16" fill="none" stroke="var(--accent-lime)" stroke-width="0.5"/>
+                </pattern>
+              </defs>
+              
+              <!-- Background grid (subtle) -->
+              <rect width="100%" height="100%" fill="url(#viz-grid)" />
+              
+              <!-- Ground Area (fills bottom portion) -->
+              <rect id="viz-ground" x="0" y="126" width="320" height="100%" fill="rgba(163, 230, 53, 0.05)" stroke="var(--accent-lime)" stroke-width="1" />
+              <!-- Ground Tileset Grid -->
+              <rect id="viz-ground-grid" x="0" y="126" width="320" height="100%" fill="url(#viz-grid-solid)" />
+              
+              <!-- Character Box (Standing on ground) -->
+              <rect id="viz-char" x="145" y="76" width="30" height="50" fill="rgba(255, 75, 100, 0.2)" stroke="rgba(255, 75, 100, 1)" stroke-width="2" rx="2" />
+              
+              <!-- Labels -->
+              <text id="viz-res-label" x="8" y="16" fill="rgba(255,255,255,0.3)" font-family="monospace" font-size="8">320x180</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Pixel Art Converter Tool -->
+      <div id="tool-converter" class="app-workspace tool-hidden">
       
       <!-- Sidebar / Settings Control Panel -->
       <aside class="settings-sidebar">
@@ -380,7 +514,8 @@
 
           </div>
         </div>
-      </main>
+      </div>
+    </main>
 
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>

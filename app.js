@@ -109,10 +109,35 @@ const ctxAfter = canvasAfter.getContext('2d');
 const comparisonSlider = document.getElementById('comparison-slider');
 const afterPanel = document.getElementById('after-panel');
 const sliderHandle = document.getElementById('slider-handle');
-// Settings Profiles
+// Settings Profiles (Converter)
 const selectConfigPreset = document.getElementById('select-config-preset');
 const btnSaveConfig = document.getElementById('btn-save-config');
 const btnDeleteConfig = document.getElementById('btn-delete-config');
+
+// Navigation & Tools
+const navVisualizer = document.getElementById('nav-visualizer');
+const navConverter = document.getElementById('nav-converter');
+const toolVisualizer = document.getElementById('tool-visualizer');
+const toolConverter = document.getElementById('tool-converter');
+
+// Visualizer DOM
+const selectVizRes = document.getElementById('select-viz-res');
+const valCharWidth = document.getElementById('val-char-width');
+const valCharHeight = document.getElementById('val-char-height');
+const valTileSize = document.getElementById('val-tile-size');
+
+const vizSvg = document.getElementById('viz-svg');
+const vizGround = document.getElementById('viz-ground');
+const vizGroundGrid = document.getElementById('viz-ground-grid');
+const vizChar = document.getElementById('viz-char');
+const vizResLabel = document.getElementById('viz-res-label');
+const vizGridPattern = document.getElementById('viz-grid');
+const vizGridSolidPattern = document.getElementById('viz-grid-solid');
+
+// Settings Profiles (Visualizer)
+const selectVizPreset = document.getElementById('select-viz-preset');
+const btnSaveViz = document.getElementById('btn-save-viz');
+const btnDeleteViz = document.getElementById('btn-delete-viz');
 
 // Sliders and Selects
 const rangeResolution = document.getElementById('range-resolution');
@@ -151,7 +176,9 @@ const statusColorsUsed = document.getElementById('status-colors-used');
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
+  setupNavigation();
   initSettingsProfiles();
+  initVisualizer();
   setupUploadListeners();
   setupSlidersAndControls();
   setupComparisonSlider();
@@ -1365,8 +1392,208 @@ function applyProfile(p) {
   showToast('Profile loaded', 'success');
 }
 
+/* ==========================================================================
+   Visualizer Tool
+   ========================================================================== */
+function setupNavigation() {
+  navVisualizer.addEventListener('click', () => {
+    navVisualizer.classList.add('active');
+    navConverter.classList.remove('active');
+    toolVisualizer.classList.remove('tool-hidden');
+    toolConverter.classList.add('tool-hidden');
+  });
+
+  navConverter.addEventListener('click', () => {
+    navConverter.classList.add('active');
+    navVisualizer.classList.remove('active');
+    toolConverter.classList.remove('tool-hidden');
+    toolVisualizer.classList.add('tool-hidden');
+  });
+}
+
+function initVisualizer() {
+  const updateVisualizer = () => {
+    // 1. Get Game Resolution
+    const resValue = selectVizRes.value;
+    const [w, h] = resValue.split(',').map(Number);
+    
+    // Update SVG viewBox and label
+    vizSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    vizResLabel.textContent = `${w}x${h}`;
+    
+    // 2. Get Character Size
+    const charW = parseInt(valCharWidth.value) || 30;
+    const charH = parseInt(valCharHeight.value) || 50;
+    
+    // Position character ~30% from the bottom of the screen
+    const groundLevelY = Math.floor(h * 0.7); 
+    const charX = Math.floor((w - charW) / 2); // Centered horizontally
+    const charY = groundLevelY - charH;
+    
+    vizChar.setAttribute('width', charW);
+    vizChar.setAttribute('height', charH);
+    vizChar.setAttribute('x', charX);
+    vizChar.setAttribute('y', charY);
+    
+    // 3. Update Tileset Grid / Ground
+    const tileSize = parseInt(valTileSize.value) || 16;
+    
+    // The ground starts immediately below the character
+    const groundHeight = h - groundLevelY;
+    
+    vizGround.setAttribute('y', groundLevelY);
+    vizGround.setAttribute('height', groundHeight);
+    
+    vizGroundGrid.setAttribute('y', groundLevelY);
+    vizGroundGrid.setAttribute('height', groundHeight);
+    
+    // Update SVG patterns to reflect new tile size
+    vizGridPattern.setAttribute('width', tileSize);
+    vizGridPattern.setAttribute('height', tileSize);
+    vizGridPattern.querySelector('rect').setAttribute('width', tileSize);
+    vizGridPattern.querySelector('rect').setAttribute('height', tileSize);
+    
+    vizGridSolidPattern.setAttribute('width', tileSize);
+    vizGridSolidPattern.setAttribute('height', tileSize);
+    vizGridSolidPattern.querySelector('rect').setAttribute('width', tileSize);
+    vizGridSolidPattern.querySelector('rect').setAttribute('height', tileSize);
+  };
+  
+  // Setup listeners for updates
+  selectVizRes.addEventListener('change', updateVisualizer);
+  valCharWidth.addEventListener('input', updateVisualizer);
+  valCharHeight.addEventListener('input', updateVisualizer);
+  valTileSize.addEventListener('input', updateVisualizer);
+  
+  // Custom spin controls for Visualizer inputs
+  const setupSpinControls = (inputEl) => {
+    const container = inputEl.closest('.input-with-suffix');
+    if (container && !container.querySelector('.spin-controls')) {
+      const spinControls = document.createElement('div');
+      spinControls.className = 'spin-controls';
+      spinControls.innerHTML = `
+        <button class="spin-up">▲</button>
+        <button class="spin-down">▼</button>
+      `;
+      container.appendChild(spinControls);
+
+      const btnUp = spinControls.querySelector('.spin-up');
+      const btnDown = spinControls.querySelector('.spin-down');
+
+      const stepVal = (dir) => {
+        let val = parseInt(inputEl.value) || 0;
+        val += dir;
+        const min = parseInt(inputEl.min) || 1;
+        const max = parseInt(inputEl.max) || 256;
+        if (val < min) val = min;
+        if (val > max) val = max;
+        
+        inputEl.value = val;
+        updateVisualizer();
+      };
+
+      btnUp.addEventListener('click', () => stepVal(1));
+      btnDown.addEventListener('click', () => stepVal(-1));
+    }
+  };
+  
+  setupSpinControls(valCharWidth);
+  setupSpinControls(valCharHeight);
+  setupSpinControls(valTileSize);
+
+  initVizProfiles(updateVisualizer);
+
+  // Initial draw
+  updateVisualizer();
+}
+
+function initVizProfiles(updateCb) {
+  const STORAGE_KEY = 'cgTools_viz_presets';
+  const loadProfiles = () => JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  const saveProfiles = (p) => localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+
+  const refreshDropdown = () => {
+    const profiles = loadProfiles();
+    // Keep the first option (default)
+    selectVizPreset.innerHTML = '<option value="default">Default</option>';
+    
+    Object.keys(profiles).forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      selectVizPreset.appendChild(opt);
+    });
+  };
+
+  refreshDropdown();
+
+  btnSaveViz.addEventListener('click', () => {
+    const name = prompt('Enter a name for this visualizer profile:');
+    if (!name || name === 'default') return;
+
+    const profiles = loadProfiles();
+    profiles[name] = {
+      res: selectVizRes.value,
+      charW: valCharWidth.value,
+      charH: valCharHeight.value,
+      tileSize: valTileSize.value
+    };
+    saveProfiles(profiles);
+    
+    refreshDropdown();
+    selectVizPreset.value = name;
+    showToast(`Saved Visualizer Profile: ${name}`, 'success');
+  });
+
+  btnDeleteViz.addEventListener('click', () => {
+    const name = selectVizPreset.value;
+    if (name === 'default') {
+      showToast('Cannot delete default profile.', 'error');
+      return;
+    }
+    if (!confirm(`Delete visualizer profile "${name}"?`)) return;
+
+    const profiles = loadProfiles();
+    delete profiles[name];
+    saveProfiles(profiles);
+    
+    refreshDropdown();
+    selectVizPreset.value = 'default';
+    
+    // reset to defaults
+    selectVizRes.value = '320,180';
+    valCharWidth.value = 30;
+    valCharHeight.value = 50;
+    valTileSize.value = 16;
+    updateCb();
+    
+    showToast('Profile deleted', 'success');
+  });
+
+  selectVizPreset.addEventListener('change', () => {
+    const name = selectVizPreset.value;
+    if (name === 'default') {
+      selectVizRes.value = '320,180';
+      valCharWidth.value = 30;
+      valCharHeight.value = 50;
+      valTileSize.value = 16;
+    } else {
+      const profiles = loadProfiles();
+      const p = profiles[name];
+      if (p) {
+        selectVizRes.value = p.res;
+        valCharWidth.value = p.charW;
+        valCharHeight.value = p.charH;
+        valTileSize.value = p.tileSize;
+      }
+    }
+    updateCb();
+    showToast(`Loaded: ${name}`, 'success');
+  });
+}
+
 // Check for updates every 60s
-const CURRENT_VERSION = 'v0.12';
+const CURRENT_VERSION = 'v0.13';
 function checkForUpdates() {
   fetch('./index.html?t=' + Date.now())
     .then(r => r.text())
