@@ -109,6 +109,21 @@ body {
   -webkit-text-fill-color: transparent;
 }
 
+.app-version {
+  -webkit-text-fill-color: var(--text-muted);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: middle;
+  margin-left: 6px;
+  border: 1px solid var(--border-color);
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: normal;
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .brand-tagline {
   font-size: 10px;
   color: var(--text-muted);
