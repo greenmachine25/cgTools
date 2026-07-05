@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cgtools-cache-v0.06';
+const CACHE_NAME = 'cgtools-cache-v0.09';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -14,7 +14,6 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('[Service Worker] Caching core offline shell');
-        // Fetch each asset bypass-caching to guarantee latest copy
         return Promise.allSettled(
           ASSETS_TO_CACHE.map(asset => {
             return fetch(new Request(asset, { cache: 'reload' }))
@@ -50,39 +49,31 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch interception with Cache-First strategy & dynamic Font caching
+// Fetch interception with Network-First strategy
 self.addEventListener('fetch', (event) => {
-  // Ignore non-GET requests (e.g. tracking or post requests if any)
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      return fetch(event.request)
-        .then((networkResponse) => {
-          // If response is valid, dynamically cache standard dependencies such as Google Fonts
-          if (
-            networkResponse &&
-            networkResponse.status === 200 &&
-            (event.request.url.includes('fonts.googleapis.com') || event.request.url.includes('fonts.gstatic.com'))
-          ) {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
           }
-          return networkResponse;
-        })
-        .catch(() => {
-          // Offline fallback logic for html navigation
           if (event.request.mode === 'navigate') {
             return caches.match('./index.html');
           }
         });
-    })
+      })
   );
 });
 
