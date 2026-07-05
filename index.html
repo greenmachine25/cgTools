@@ -42,7 +42,7 @@
       <div class="header-brand">
         <img src="./logo.svg" alt="cgTools Logo" class="brand-logo">
         <div class="brand-text">
-          <h1>cgTools <span class="app-version">v0.09</span></h1>
+          <h1>cgTools <span class="app-version">v0.10</span></h1>
           <span class="brand-tagline">creative &amp; time-saving utilities</span>
         </div>
       </div>
@@ -84,6 +84,31 @@
 
         <div class="sidebar-scroll">
           
+          <!-- Configuration Presets -->
+          <section class="settings-group" style="padding-bottom: 15px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px;">
+            <h3 class="group-title">Settings Profile</h3>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <div class="select-container" style="flex-grow: 1;">
+                <select id="select-config-preset" class="custom-select">
+                  <option value="default">Default</option>
+                </select>
+              </div>
+              <button id="btn-save-config" class="btn-icon" title="Save current settings as a new profile" style="padding: 10px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; height: 38px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+              </button>
+              <button id="btn-delete-config" class="btn-icon" title="Delete current profile" style="padding: 10px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; height: 38px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 6h18"></path>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          </section>
+
           <!-- Image Upload / Dropzone Section -->
           <section class="settings-group">
             <h3 class="group-title">1. Upload Image</h3>
@@ -112,10 +137,10 @@
           <section class="settings-group">
             <div class="group-title-with-value">
               <h3 class="group-title">2. Target Resolution (Width)</h3>
-              <span id="val-resolution" class="group-value">64px</span>
+              <span id="val-resolution" class="group-value">256px</span>
             </div>
             <div class="range-container">
-              <input type="range" id="range-resolution" min="8" max="256" value="64" step="8" class="slider">
+              <input type="range" id="range-resolution" min="8" max="256" value="256" step="8" class="slider">
               <div class="range-labels">
                 <span>Retro (8px)</span>
                 <span>High Detail (256px)</span>
@@ -129,16 +154,16 @@
             
             <!-- Tab Buttons to choose between Custom Palette and Presets -->
             <div class="palette-tabs">
-              <button id="tab-presets" class="tab-btn active" data-tab="presets">Presets</button>
-              <button id="tab-custom" class="tab-btn" data-tab="custom">Custom Depth</button>
+              <button id="tab-presets" class="tab-btn" data-tab="presets">Presets</button>
+              <button id="tab-custom" class="tab-btn active" data-tab="custom">Custom Depth</button>
             </div>
 
             <!-- Predefined Palettes Content -->
-            <div id="tab-content-presets" class="tab-content">
+            <div id="tab-content-presets" class="tab-content hidden">
               <div class="select-container">
                 <select id="select-preset" class="custom-select">
-                  <option value="none">Full Colors (No Limit)</option>
-                  <option value="gb-classic" selected>GameBoy Classic (4 Shades of Green)</option>
+                  <option value="none" selected>Full Colors (No Limit)</option>
+                  <option value="gb-classic">GameBoy Classic (4 Shades of Green)</option>
                   <option value="pico8">PICO-8 (16 Vibrant Retro Colors)</option>
                   <option value="nes">NES / Famicom (Classic 8-Bit)</option>
                   <option value="sweetie16">Sweetie 16 (Soft &amp; Playful)</option>
@@ -154,13 +179,13 @@
             </div>
 
             <!-- Custom Color Depth Content -->
-            <div id="tab-content-custom" class="tab-content hidden">
+            <div id="tab-content-custom" class="tab-content">
               <div class="range-container">
                 <div class="range-header">
                   <span>Color Limit</span>
-                  <span id="val-color-limit">16 colors</span>
+                  <span id="val-color-limit">30 colors</span>
                 </div>
-                <input type="range" id="range-color-limit" min="2" max="256" value="16" step="1" class="slider">
+                <input type="range" id="range-color-limit" min="2" max="256" value="30" step="1" class="slider">
                 <div class="range-labels">
                   <span>2 colors</span>
                   <span>256 colors</span>
@@ -174,8 +199,8 @@
             <h3 class="group-title">4. Dithering</h3>
             <div class="select-container">
               <select id="select-dither" class="custom-select">
-                <option value="none">No Dithering (Flat Blocks)</option>
-                <option value="bayer-4x4" selected>Bayer Dithering 4x4 (Retro Texturing)</option>
+                <option value="none" selected>No Dithering (Flat Blocks)</option>
+                <option value="bayer-4x4">Bayer Dithering 4x4 (Retro Texturing)</option>
                 <option value="bayer-8x8">Bayer Dithering 8x8 (Fine Texturing)</option>
                 <option value="floyd-steinberg">Floyd-Steinberg (Smooth Diffusion)</option>
               </select>
@@ -211,27 +236,27 @@
             <div class="range-container margin-bottom-sm">
               <div class="range-header-compact">
                 <label for="range-contrast">Contrast</label>
-                <span id="val-contrast">0%</span>
+                <span id="val-contrast">15%</span>
               </div>
-              <input type="range" id="range-contrast" min="-100" max="100" value="0" step="5" class="slider">
+              <input type="range" id="range-contrast" min="-100" max="100" value="15" step="5" class="slider">
             </div>
 
             <!-- Saturation -->
             <div class="range-container margin-bottom-sm">
               <div class="range-header-compact">
                 <label for="range-saturation">Saturation</label>
-                <span id="val-saturation">0%</span>
+                <span id="val-saturation">15%</span>
               </div>
-              <input type="range" id="range-saturation" min="-100" max="100" value="0" step="5" class="slider">
+              <input type="range" id="range-saturation" min="-100" max="100" value="15" step="5" class="slider">
             </div>
 
             <!-- Sharpness Pre-filter -->
             <div class="range-container">
               <div class="range-header-compact">
                 <label for="range-sharpness">Sharpness Filter</label>
-                <span id="val-sharpness">0%</span>
+                <span id="val-sharpness">20%</span>
               </div>
-              <input type="range" id="range-sharpness" min="0" max="100" value="0" step="10" class="slider">
+              <input type="range" id="range-sharpness" min="0" max="100" value="20" step="10" class="slider">
             </div>
           </section>
 

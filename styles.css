@@ -4,6 +4,7 @@
 
 /* Design Tokens & Theme Variables */
 :root {
+  color-scheme: dark;
   --bg-primary: #07080c;
   --bg-secondary: #0d0f17;
   --bg-tertiary: #151825;

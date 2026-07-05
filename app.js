@@ -109,6 +109,10 @@ const ctxAfter = canvasAfter.getContext('2d');
 const comparisonSlider = document.getElementById('comparison-slider');
 const afterPanel = document.getElementById('after-panel');
 const sliderHandle = document.getElementById('slider-handle');
+// Settings Profiles
+const selectConfigPreset = document.getElementById('select-config-preset');
+const btnSaveConfig = document.getElementById('btn-save-config');
+const btnDeleteConfig = document.getElementById('btn-delete-config');
 
 // Sliders and Selects
 const rangeResolution = document.getElementById('range-resolution');
@@ -147,6 +151,7 @@ const statusColorsUsed = document.getElementById('status-colors-used');
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
+  initSettingsProfiles();
   setupUploadListeners();
   setupSlidersAndControls();
   setupComparisonSlider();
@@ -156,18 +161,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Reset logic
 btnReset.addEventListener('click', () => {
-  rangeResolution.value = 64;
-  selectPreset.value = 'gb-classic';
-  rangeColorLimit.value = 16;
-  selectDither.value = 'bayer-4x4';
+  rangeResolution.value = 256;
+  selectPreset.value = 'none';
+  rangeColorLimit.value = 30;
+  selectDither.value = 'none';
   rangeDitherWeight.value = 80;
   rangeBrightness.value = 0;
-  rangeContrast.value = 0;
-  rangeSaturation.value = 0;
-  rangeSharpness.value = 0;
+  rangeContrast.value = 15;
+  rangeSaturation.value = 15;
+  rangeSharpness.value = 20;
   
-  // Set tab to presets
-  switchPaletteTab('presets');
+  // Set tab to custom depth
+  switchPaletteTab('custom');
   
   // Trigger update updates
   updateSliderLabels();
@@ -1194,8 +1199,119 @@ function showToast(message, type = 'info', htmlContent = null) {
   }
 }
 
+/* ==========================================================================
+   Settings Profiles
+   ========================================================================== */
+
+function initSettingsProfiles() {
+  loadProfilesToDropdown();
+
+  selectConfigPreset.addEventListener('change', (e) => {
+    const profileName = e.target.value;
+    if (profileName === 'default') {
+      btnReset.click();
+    } else {
+      const profiles = getSavedProfiles();
+      const profile = profiles[profileName];
+      if (profile) {
+        applyProfile(profile);
+      }
+    }
+  });
+
+  btnSaveConfig.addEventListener('click', () => {
+    const name = prompt('Enter a name for this Settings Profile:');
+    if (!name || name.trim() === '' || name.trim().toLowerCase() === 'default') return;
+    
+    const profile = {
+      resolution: rangeResolution.value,
+      presetTab: currentPaletteTab,
+      presetSelect: selectPreset.value,
+      colorLimit: rangeColorLimit.value,
+      dither: selectDither.value,
+      ditherWeight: rangeDitherWeight.value,
+      brightness: rangeBrightness.value,
+      contrast: rangeContrast.value,
+      saturation: rangeSaturation.value,
+      sharpness: rangeSharpness.value
+    };
+    
+    const profiles = getSavedProfiles();
+    profiles[name.trim()] = profile;
+    localStorage.setItem('cgtools_profiles', JSON.stringify(profiles));
+    
+    loadProfilesToDropdown(name.trim());
+    showToast(`Profile "${name.trim()}" saved!`, 'success');
+  });
+
+  btnDeleteConfig.addEventListener('click', () => {
+    const name = selectConfigPreset.value;
+    if (name === 'default') {
+      showToast('Cannot delete the default profile', 'error');
+      return;
+    }
+    
+    if (confirm(`Are you sure you want to delete the profile "${name}"?`)) {
+      const profiles = getSavedProfiles();
+      delete profiles[name];
+      localStorage.setItem('cgtools_profiles', JSON.stringify(profiles));
+      
+      loadProfilesToDropdown('default');
+      btnReset.click();
+      showToast(`Profile "${name}" deleted!`, 'info');
+    }
+  });
+}
+
+function getSavedProfiles() {
+  const data = localStorage.getItem('cgtools_profiles');
+  return data ? JSON.parse(data) : {};
+}
+
+function loadProfilesToDropdown(selected = null) {
+  const profiles = getSavedProfiles();
+  
+  selectConfigPreset.innerHTML = '<option value="default">Default</option>';
+  
+  for (const name of Object.keys(profiles)) {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    selectConfigPreset.appendChild(option);
+  }
+  
+  if (selected) {
+    selectConfigPreset.value = selected;
+  }
+}
+
+function applyProfile(p) {
+  rangeResolution.value = p.resolution;
+  
+  if (p.presetTab === 'presets') {
+    selectPreset.value = p.presetSelect;
+    switchPaletteTab('presets');
+  } else {
+    rangeColorLimit.value = p.colorLimit;
+    switchPaletteTab('custom');
+  }
+  
+  selectDither.value = p.dither;
+  rangeDitherWeight.value = p.ditherWeight;
+  rangeBrightness.value = p.brightness;
+  rangeContrast.value = p.contrast;
+  rangeSaturation.value = p.saturation;
+  rangeSharpness.value = p.sharpness;
+  
+  updateSliderLabels();
+  renderPalettePreview();
+  triggerPipeline();
+  
+  showToast('Profile loaded', 'success');
+}
+
 // Check for updates every 60s
-const CURRENT_VERSION = 'v0.09';
+const CURRENT_VERSION = 'v0.10';
 function checkForUpdates() {
   fetch('./index.html?t=' + Date.now())
     .then(r => r.text())
