@@ -20,7 +20,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
   
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="./styles.css?v=0.25">
+  <link rel="stylesheet" href="./styles.css?v=0.26">
 </head>
 <body>
   <!-- Update Notification Banner -->
@@ -42,7 +42,7 @@
       <div class="header-brand">
         <img src="./logo.svg" alt="cgTools Logo" class="brand-logo">
         <div class="brand-text">
-          <h1>cgTools <span class="app-version">v0.25</span></h1>
+          <h1>cgTools <span class="app-version">v0.26</span></h1>
           <span class="brand-tagline">creative &amp; time-saving utilities</span>
         </div>
       </div>
@@ -205,7 +205,7 @@
               <div class="workspace-viewport" style="display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;">
                 
                 <!-- Scalable Container for the SVG -->
-                <div id="viz-svg-container" style="background: #000; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; position: relative; transition: transform 0.2s; transform-origin: center center;">
+                <div id="viz-svg-container" style="background: #000; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; position: relative; transition: transform 0.2s; transform-origin: center center; flex-shrink: 0;">
               <svg id="viz-svg" style="display: block; width: 100%; height: 100%;" preserveAspectRatio="none">
                 <defs>
                   <pattern id="viz-grid" width="16" height="16" patternUnits="userSpaceOnUse">
@@ -661,7 +661,7 @@
               <div class="workspace-viewport" style="display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; background: url('data:image/svg+xml;utf8,<svg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'><rect width=\'10\' height=\'10\' fill=\'%23222\'/><rect x=\'10\' y=\'10\' width=\'10\' height=\'10\' fill=\'%23222\'/><rect x=\'10\' width=\'10\' height=\'10\' fill=\'%23333\'/><rect y=\'10\' width=\'10\' height=\'10\' fill=\'%23333\'/></svg>') repeat;">
                 
                 <!-- Scalable Container for the Canvas -->
-                <div id="check-canvas-container" style="box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; position: relative; transition: transform 0.2s; transform-origin: center center;">
+                <div id="check-canvas-container" style="box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; position: relative; transition: transform 0.2s; transform-origin: center center; flex-shrink: 0;">
                   <canvas id="check-canvas" width="1920" height="1080" style="display: block; width: 100%; height: 100%;"></canvas>
                 </div>
               </div>
@@ -674,7 +674,7 @@
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
   </div>
-  <script src="app.js?v=0.25"></script>
+  <script src="app.js?v=0.26"></script>
   <script>
     // Offline status detection
     const offlineIndicator = document.getElementById('offline-indicator');
