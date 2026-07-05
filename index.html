@@ -42,7 +42,7 @@
       <div class="header-brand">
         <img src="./logo.svg" alt="cgTools Logo" class="brand-logo">
         <div class="brand-text">
-          <h1>cgTools <span class="app-version">v0.10</span></h1>
+          <h1>cgTools <span class="app-version">v0.11</span></h1>
           <span class="brand-tagline">creative &amp; time-saving utilities</span>
         </div>
       </div>
@@ -137,7 +137,10 @@
           <section class="settings-group">
             <div class="group-title-with-value">
               <h3 class="group-title">2. Target Resolution (Width)</h3>
-              <span id="val-resolution" class="group-value">256px</span>
+              <div class="input-with-suffix">
+                <input type="number" id="val-resolution" class="val-input" value="256" min="8" max="256">
+                <span class="val-suffix">px</span>
+              </div>
             </div>
             <div class="range-container">
               <input type="range" id="range-resolution" min="8" max="256" value="256" step="8" class="slider">
@@ -183,7 +186,10 @@
               <div class="range-container">
                 <div class="range-header">
                   <span>Color Limit</span>
-                  <span id="val-color-limit">30 colors</span>
+                  <div class="input-with-suffix">
+                    <input type="number" id="val-color-limit" class="val-input" value="30" min="2" max="256">
+                    <span class="val-suffix">colors</span>
+                  </div>
                 </div>
                 <input type="range" id="range-color-limit" min="2" max="256" value="30" step="1" class="slider">
                 <div class="range-labels">
@@ -209,7 +215,10 @@
             <div class="range-container margin-top-sm">
               <div class="range-header">
                 <span>Dither Weight / Mix</span>
-                <span id="val-dither-weight">80%</span>
+                <div class="input-with-suffix">
+                  <input type="number" id="val-dither-weight" class="val-input" value="80" min="0" max="100">
+                  <span class="val-suffix">%</span>
+                </div>
               </div>
               <input type="range" id="range-dither-weight" min="0" max="100" value="80" step="5" class="slider">
               <div class="range-labels">
@@ -227,7 +236,10 @@
             <div class="range-container margin-bottom-sm">
               <div class="range-header-compact">
                 <label for="range-brightness">Brightness</label>
-                <span id="val-brightness">0%</span>
+                <div class="input-with-suffix">
+                  <input type="number" id="val-brightness" class="val-input" value="0" min="-100" max="100">
+                  <span class="val-suffix">%</span>
+                </div>
               </div>
               <input type="range" id="range-brightness" min="-100" max="100" value="0" step="5" class="slider">
             </div>
@@ -236,7 +248,10 @@
             <div class="range-container margin-bottom-sm">
               <div class="range-header-compact">
                 <label for="range-contrast">Contrast</label>
-                <span id="val-contrast">15%</span>
+                <div class="input-with-suffix">
+                  <input type="number" id="val-contrast" class="val-input" value="15" min="-100" max="100">
+                  <span class="val-suffix">%</span>
+                </div>
               </div>
               <input type="range" id="range-contrast" min="-100" max="100" value="15" step="5" class="slider">
             </div>
@@ -245,7 +260,10 @@
             <div class="range-container margin-bottom-sm">
               <div class="range-header-compact">
                 <label for="range-saturation">Saturation</label>
-                <span id="val-saturation">15%</span>
+                <div class="input-with-suffix">
+                  <input type="number" id="val-saturation" class="val-input" value="15" min="-100" max="100">
+                  <span class="val-suffix">%</span>
+                </div>
               </div>
               <input type="range" id="range-saturation" min="-100" max="100" value="15" step="5" class="slider">
             </div>
@@ -254,7 +272,10 @@
             <div class="range-container">
               <div class="range-header-compact">
                 <label for="range-sharpness">Sharpness Filter</label>
-                <span id="val-sharpness">20%</span>
+                <div class="input-with-suffix">
+                  <input type="number" id="val-sharpness" class="val-input" value="20" min="0" max="100">
+                  <span class="val-suffix">%</span>
+                </div>
               </div>
               <input type="range" id="range-sharpness" min="0" max="100" value="20" step="10" class="slider">
             </div>

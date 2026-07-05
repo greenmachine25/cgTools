@@ -81,7 +81,7 @@ const BAYER_8X8 = [
 
 // State Variables
 let sourceImage = null;
-let currentPaletteTab = 'presets'; // 'presets' or 'custom'
+let currentPaletteTab = 'custom'; // 'presets' or 'custom'
 let processTimeout = null;
 let spacePressed = false;
 let originalSliderPercent = 50;
@@ -921,20 +921,41 @@ function countUniqueColors(data) {
 
 function setupSlidersAndControls() {
   const sliders = [
-    { el: rangeResolution, valEl: valResolution, suffix: 'px' },
-    { el: rangeColorLimit, valEl: valColorLimit, suffix: ' colors' },
-    { el: rangeDitherWeight, valEl: valDitherWeight, suffix: '%' },
-    { el: rangeBrightness, valEl: valBrightness, suffix: '%' },
-    { el: rangeContrast, valEl: valContrast, suffix: '%' },
-    { el: rangeSaturation, valEl: valSaturation, suffix: '%' },
-    { el: rangeSharpness, valEl: valSharpness, suffix: '%' }
+    { el: rangeResolution, valEl: valResolution },
+    { el: rangeColorLimit, valEl: valColorLimit },
+    { el: rangeDitherWeight, valEl: valDitherWeight },
+    { el: rangeBrightness, valEl: valBrightness },
+    { el: rangeContrast, valEl: valContrast },
+    { el: rangeSaturation, valEl: valSaturation },
+    { el: rangeSharpness, valEl: valSharpness }
   ];
 
   // Set up listeners for updating numbers next to range sliders
   sliders.forEach(slider => {
+    // When range slider changes, update number input
     slider.el.addEventListener('input', () => {
-      slider.valEl.textContent = `${slider.el.value}${slider.suffix}`;
+      slider.valEl.value = slider.el.value;
       triggerPipeline();
+    });
+
+    // When number input changes, update range slider
+    slider.valEl.addEventListener('input', () => {
+      let val = parseInt(slider.valEl.value);
+      if (isNaN(val)) return;
+      
+      // Enforce bounds
+      const min = parseInt(slider.el.min);
+      const max = parseInt(slider.el.max);
+      if (val < min) val = min;
+      if (val > max) val = max;
+      
+      slider.el.value = val;
+      triggerPipeline();
+    });
+    
+    // Auto-correct out-of-bounds on blur
+    slider.valEl.addEventListener('blur', () => {
+      slider.valEl.value = slider.el.value;
     });
   });
 
@@ -960,13 +981,13 @@ function setupSlidersAndControls() {
 }
 
 function updateSliderLabels() {
-  valResolution.textContent = `${rangeResolution.value}px`;
-  valColorLimit.textContent = `${rangeColorLimit.value} colors`;
-  valDitherWeight.textContent = `${rangeDitherWeight.value}%`;
-  valBrightness.textContent = `${rangeBrightness.value}%`;
-  valContrast.textContent = `${rangeContrast.value}%`;
-  valSaturation.textContent = `${rangeSaturation.value}%`;
-  valSharpness.textContent = `${rangeSharpness.value}%`;
+  valResolution.value = rangeResolution.value;
+  valColorLimit.value = rangeColorLimit.value;
+  valDitherWeight.value = rangeDitherWeight.value;
+  valBrightness.value = rangeBrightness.value;
+  valContrast.value = rangeContrast.value;
+  valSaturation.value = rangeSaturation.value;
+  valSharpness.value = rangeSharpness.value;
   
   const parentRange = rangeDitherWeight.closest('.range-container');
   if (selectDither.value === 'none') {
@@ -1311,7 +1332,7 @@ function applyProfile(p) {
 }
 
 // Check for updates every 60s
-const CURRENT_VERSION = 'v0.10';
+const CURRENT_VERSION = 'v0.11';
 function checkForUpdates() {
   fetch('./index.html?t=' + Date.now())
     .then(r => r.text())
