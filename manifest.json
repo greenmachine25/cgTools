@@ -1,0 +1,24 @@
+{
+  "short_name": "cgTools",
+  "name": "cgTools Creative Utility Suite",
+  "description": "An offline-capable suite of creative tools starting with an Image-to-Pixel-Art converter.",
+  "icons": [
+    {
+      "src": "./logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "./logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#080512",
+  "theme_color": "#0f0a24",
+  "display": "standalone",
+  "orientation": "any"
+}

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cgTools - Offline Creative Toolkit</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="An offline-capable suite of creative tools. Convert your images to retro pixel art, customize colors, apply ordered or Floyd-Steinberg dithering, and export instantly.">
+  <meta name="theme-color" content="#0f0728">
+  
+  <!-- Web App Manifest & Favicon -->
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/svg+xml" href="./logo.svg">
+  <link rel="apple-touch-icon" href="./logo.svg">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <!-- App Container -->
+  <div id="app" class="app-layout">
+    
+    <!-- Top Navigation Bar -->
+    <header class="app-header">
+      <div class="header-brand">
+        <img src="./logo.svg" alt="cgTools Logo" class="brand-logo">
+        <div class="brand-text">
+          <h1>cgTools</h1>
+          <span class="brand-tagline">creative &amp; time-saving utilities</span>
+        </div>
+      </div>
+      
+      <nav class="header-nav">
+        <div class="nav-item active">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="9" rx="1" />
+            <rect x="14" y="3" width="7" height="5" rx="1" />
+            <rect x="14" y="12" width="7" height="9" rx="1" />
+            <rect x="3" y="16" width="7" height="5" rx="1" />
+          </svg>
+          <span>Pixel Art Converter</span>
+        </div>
+        <!-- Future slots can be added here -->
+      </nav>
+
+      <div class="header-status">
+        <div id="offline-indicator" class="status-badge checking">
+          <span class="status-dot"></span>
+          <span class="status-label">Checking Offline Status</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="app-workspace">
+      
+      <!-- Sidebar / Settings Control Panel -->
+      <aside class="settings-sidebar">
+        <div class="sidebar-header">
+          <h2>Tool Settings</h2>
+          <button id="btn-reset" class="btn-icon" title="Reset all settings to default">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="sidebar-scroll">
+          
+          <!-- Image Upload / Dropzone Section -->
+          <section class="settings-group">
+            <h3 class="group-title">1. Upload Image</h3>
+            <div id="dropzone" class="upload-dropzone">
+              <input type="file" id="file-input" accept="image/*" class="file-input-hidden">
+              <div class="dropzone-content">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" class="upload-icon">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                </svg>
+                <span class="dropzone-text">Drag &amp; drop an image here</span>
+                <span class="dropzone-subtext">or <span class="browse-link">browse files</span></span>
+              </div>
+            </div>
+            <div id="file-info" class="file-info-bar hidden">
+              <span id="file-name" class="file-name">image.png</span>
+              <button id="btn-remove-file" class="btn-close" aria-label="Remove image">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </section>
+
+          <!-- Resolution / Pixel Settings -->
+          <section class="settings-group">
+            <div class="group-title-with-value">
+              <h3 class="group-title">2. Pixel Size</h3>
+              <span id="val-pixel-size" class="group-value">8px</span>
+            </div>
+            <div class="range-container">
+              <input type="range" id="range-pixel-size" min="2" max="64" value="8" step="1" class="slider">
+              <div class="range-labels">
+                <span>Fine (2px)</span>
+                <span>Chunky (64px)</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Color Palette Selection -->
+          <section class="settings-group">
+            <h3 class="group-title">3. Color Palette</h3>
+            
+            <!-- Tab Buttons to choose between Custom Palette and Presets -->
+            <div class="palette-tabs">
+              <button id="tab-presets" class="tab-btn active" data-tab="presets">Presets</button>
+              <button id="tab-custom" class="tab-btn" data-tab="custom">Custom Depth</button>
+            </div>
+
+            <!-- Predefined Palettes Content -->
+            <div id="tab-content-presets" class="tab-content">
+              <div class="select-container">
+                <select id="select-preset" class="custom-select">
+                  <option value="none">Full Colors (No Limit)</option>
+                  <option value="gb-classic" selected>GameBoy Classic (4 Shades of Green)</option>
+                  <option value="pico8">PICO-8 (16 Vibrant Retro Colors)</option>
+                  <option value="nes">NES / Famicom (Classic 8-Bit)</option>
+                  <option value="sweetie16">Sweetie 16 (Soft &amp; Playful)</option>
+                  <option value="c64">Commodore 64 (Muted Retro Shades)</option>
+                  <option value="vaporwave">Vaporwave Glow (Cyberpunk Pinks/Cyans)</option>
+                  <option value="monochrome">Grayscale / GameBoy Pocket</option>
+                  <option value="noir">1-Bit Noir (Pure Black &amp; White)</option>
+                </select>
+              </div>
+              <div id="palette-colors-preview" class="palette-preview-grid">
+                <!-- Color dots will be rendered here dynamically -->
+              </div>
+            </div>
+
+            <!-- Custom Color Depth Content -->
+            <div id="tab-content-custom" class="tab-content hidden">
+              <div class="range-container">
+                <div class="range-header">
+                  <span>Color Limit</span>
+                  <span id="val-color-limit">16 colors</span>
+                </div>
+                <input type="range" id="range-color-limit" min="2" max="256" value="16" step="1" class="slider">
+                <div class="range-labels">
+                  <span>2 colors</span>
+                  <span>256 colors</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Dithering Options -->
+          <section class="settings-group">
+            <h3 class="group-title">4. Dithering</h3>
+            <div class="select-container">
+              <select id="select-dither" class="custom-select">
+                <option value="none">No Dithering (Flat Blocks)</option>
+                <option value="bayer-4x4" selected>Bayer Dithering 4x4 (Retro Texturing)</option>
+                <option value="bayer-8x8">Bayer Dithering 8x8 (Fine Texturing)</option>
+                <option value="floyd-steinberg">Floyd-Steinberg (Smooth Diffusion)</option>
+              </select>
+            </div>
+            
+            <div class="range-container margin-top-sm">
+              <div class="range-header">
+                <span>Dither Weight / Mix</span>
+                <span id="val-dither-weight">80%</span>
+              </div>
+              <input type="range" id="range-dither-weight" min="0" max="100" value="80" step="5" class="slider">
+              <div class="range-labels">
+                <span>Subtle</span>
+                <span>Intense</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Image Adjustments -->
+          <section class="settings-group">
+            <h3 class="group-title">5. Image Adjustments</h3>
+            
+            <!-- Brightness -->
+            <div class="range-container margin-bottom-sm">
+              <div class="range-header-compact">
+                <label for="range-brightness">Brightness</label>
+                <span id="val-brightness">0%</span>
+              </div>
+              <input type="range" id="range-brightness" min="-100" max="100" value="0" step="5" class="slider">
+            </div>
+
+            <!-- Contrast -->
+            <div class="range-container margin-bottom-sm">
+              <div class="range-header-compact">
+                <label for="range-contrast">Contrast</label>
+                <span id="val-contrast">0%</span>
+              </div>
+              <input type="range" id="range-contrast" min="-100" max="100" value="0" step="5" class="slider">
+            </div>
+
+            <!-- Saturation -->
+            <div class="range-container margin-bottom-sm">
+              <div class="range-header-compact">
+                <label for="range-saturation">Saturation</label>
+                <span id="val-saturation">0%</span>
+              </div>
+              <input type="range" id="range-saturation" min="-100" max="100" value="0" step="5" class="slider">
+            </div>
+
+            <!-- Sharpness Pre-filter -->
+            <div class="range-container">
+              <div class="range-header-compact">
+                <label for="range-sharpness">Sharpness Filter</label>
+                <span id="val-sharpness">0%</span>
+              </div>
+              <input type="range" id="range-sharpness" min="0" max="100" value="0" step="10" class="slider">
+            </div>
+          </section>
+
+        </div> <!-- End of sidebar-scroll -->
+
+        <!-- Sidebar Actions -->
+        <div class="sidebar-actions">
+          <button id="btn-download" class="btn-primary" disabled>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-icon-svg">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+            <span>Download Pixel Art</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Main Canvas / Preview Workspace Area -->
+      <section class="workspace-area">
+        
+        <!-- Empty State (No Image Uploaded) -->
+        <div id="workspace-empty" class="workspace-empty-state">
+          <div class="empty-icon-glow">
+            <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="url(#neonGrad)" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </div>
+          <h2>Transform Your Images Into Retro Pixels</h2>
+          <p>Upload a photo or illustration. Adjust sizing, apply classic retro color palettes, and dither to get that vintage game aesthetic entirely offline.</p>
+          
+          <div class="empty-actions">
+            <button id="btn-browse-trigger" class="btn-secondary">
+              Browse Files
+            </button>
+            <button id="btn-sample-trigger" class="btn-tertiary">
+              Use Sample Image
+            </button>
+          </div>
+        </div>
+
+        <!-- Editor View (When Image is Loaded) -->
+        <div id="workspace-editor" class="workspace-editor-container hidden">
+          <div class="workspace-card">
+            
+            <!-- Comparison Slider -->
+            <div id="comparison-slider" class="comparison-slider-container">
+              <!-- Before Image (Source) - Left side -->
+              <div class="slider-panel before-panel">
+                <canvas id="canvas-before"></canvas>
+                <div class="panel-tag before-tag">Original</div>
+              </div>
+              
+              <!-- After Image (Result) - Right side (slides over before) -->
+              <div class="slider-panel after-panel" id="after-panel">
+                <canvas id="canvas-after"></canvas>
+                <div class="panel-tag after-tag">Pixel Art</div>
+              </div>
+              
+              <!-- Resize/Drag Handle -->
+              <div id="slider-handle" class="slider-handle">
+                <div class="handle-line"></div>
+                <div class="handle-button">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="8 5 3 10 8 15"/>
+                    <polyline points="16 5 21 10 16 15"/>
+                  </svg>
+                </div>
+                <div class="handle-line"></div>
+              </div>
+            </div>
+
+            <!-- Workspace Status Bar -->
+            <div class="editor-status-bar">
+              <div class="status-left">
+                <span id="status-resolution">0 x 0 px</span>
+                <span class="status-separator">|</span>
+                <span id="status-colors-used">Calculating colors...</span>
+              </div>
+              <div class="status-right">
+                <span>Hold spacebar to see original image</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </main>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+  </div>
+
+  <script>
+    // Offline status detection
+    const offlineIndicator = document.getElementById('offline-indicator');
+    
+    function updateOnlineStatus() {
+      if (navigator.onLine) {
+        offlineIndicator.className = 'status-badge online';
+        offlineIndicator.querySelector('.status-label').textContent = 'Online Ready';
+      } else {
+        offlineIndicator.className = 'status-badge offline';
+        offlineIndicator.querySelector('.status-label').textContent = 'Offline Mode';
+      }
+    }
+    
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    
+    // Initial check
+    setTimeout(updateOnlineStatus, 500);
+
+    // Register Service Worker for offline PWA support
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        // We use relative path ./sw.js to make it compatible with subfolders like /cgTools/
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => {
+            console.log('Service Worker registered. Scope:', reg.scope);
+            // Flash a toast for visual confirmation
+            if (window.showToast) {
+              window.showToast('Offline support activated!', 'success');
+            }
+          })
+          .catch(err => {
+            console.error('Service Worker registration failed:', err);
+          });
+      });
+    }
+  </script>
+</body>
+</html>

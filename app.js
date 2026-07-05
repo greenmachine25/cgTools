@@ -1,0 +1,1075 @@
+/* ==========================================================================
+   cgTools - Image to Pixel Art Converter Core Logic
+   ========================================================================== */
+
+// 1. Color Palette Definitions
+const PALETTES = {
+  'gb-classic': [
+    [15, 56, 15],     // Darkest green
+    [48, 98, 48],     // Dark green
+    [139, 172, 15],   // Light green
+    [155, 188, 15]    // Lightest green
+  ],
+  'pico8': [
+    [0, 0, 0], [29, 43, 83], [126, 37, 83], [0, 135, 81],
+    [171, 82, 54], [95, 87, 79], [194, 195, 199], [255, 241, 232],
+    [255, 0, 77], [255, 163, 0], [255, 236, 39], [0, 228, 54],
+    [41, 173, 255], [131, 118, 156], [255, 119, 168], [255, 204, 170]
+  ],
+  'nes': [
+    [124, 124, 124], [0, 0, 252], [0, 0, 188], [68, 40, 188],
+    [148, 0, 132], [168, 0, 32], [168, 16, 0], [136, 20, 0],
+    [80, 48, 0], [0, 120, 0], [0, 104, 0], [0, 88, 0],
+    [0, 64, 88], [0, 0, 0], [188, 188, 188], [0, 112, 252],
+    [0, 88, 248], [104, 56, 252], [216, 0, 204], [228, 0, 88],
+    [248, 56, 0], [228, 92, 16], [172, 124, 0], [0, 184, 0],
+    [0, 168, 0], [0, 168, 68], [0, 136, 136], [0, 0, 0],
+    [248, 248, 248], [60, 188, 252], [104, 136, 252], [152, 120, 248],
+    [248, 120, 248], [248, 88, 152], [248, 120, 88], [252, 160, 68],
+    [248, 184, 0], [184, 248, 24], [88, 216, 84], [88, 248, 152],
+    [0, 232, 216], [120, 120, 120], [252, 252, 252], [164, 228, 252],
+    [184, 184, 252], [216, 184, 252], [248, 184, 252], [248, 164, 192],
+    [240, 208, 176], [252, 224, 168], [248, 216, 120], [216, 248, 120],
+    [184, 248, 184], [184, 248, 216], [0, 252, 252], [248, 216, 248]
+  ],
+  'sweetie16': [
+    [26, 28, 44], [93, 39, 93], [177, 62, 83], [239, 125, 87],
+    [255, 205, 117], [167, 240, 112], [56, 183, 100], [37, 113, 121],
+    [41, 54, 111], [59, 93, 201], [65, 166, 246], [115, 239, 247],
+    [244, 244, 244], [148, 176, 194], [86, 108, 134], [51, 60, 87]
+  ],
+  'c64': [
+    [0, 0, 0], [255, 255, 255], [104, 55, 43], [112, 164, 178],
+    [111, 61, 134], [88, 141, 67], [53, 40, 121], [184, 195, 92],
+    [111, 82, 41], [67, 57, 0], [154, 103, 89], [68, 68, 68],
+    [108, 108, 108], [154, 210, 132], [108, 94, 181], [149, 149, 149]
+  ],
+  'vaporwave': [
+    [43, 15, 84], [171, 31, 101], [240, 89, 123], [247, 171, 228],
+    [255, 233, 227], [9, 195, 219], [0, 130, 200], [0, 55, 133],
+    [230, 0, 103], [26, 240, 222], [249, 237, 105], [240, 138, 93],
+    [184, 59, 94], [106, 44, 112], [79, 138, 139], [255, 46, 99]
+  ],
+  'monochrome': [
+    [0, 0, 0], [32, 32, 32], [64, 64, 64], [96, 96, 96],
+    [128, 128, 128], [160, 160, 160], [192, 192, 192], [224, 224, 224],
+    [255, 255, 255]
+  ],
+  'noir': [
+    [0, 0, 0], [255, 255, 255]
+  ]
+};
+
+// 2. Dithering Threshold Matrices
+const BAYER_4X4 = [
+  [ 0,  8,  2, 10 ],
+  [ 12, 4,  14, 6 ],
+  [ 3,  11, 1,  9 ],
+  [ 15, 7,  13, 5 ]
+];
+
+const BAYER_8X8 = [
+  [  0, 48, 12, 60,  3, 51, 15, 63 ],
+  [ 32, 16, 44, 28, 35, 19, 47, 31 ],
+  [  8, 56,  4, 52, 11, 59,  7, 55 ],
+  [ 40, 24, 36, 20, 43, 27, 39, 23 ],
+  [  2, 50, 14, 62,  1, 49, 13, 61 ],
+  [ 34, 18, 46, 30, 33, 17, 45, 29 ],
+  [ 10, 58,  6, 54,  9, 57,  5, 53 ],
+  [ 42, 26, 38, 22, 41, 25, 37, 21 ]
+];
+
+// State Variables
+let sourceImage = null;
+let currentPaletteTab = 'presets'; // 'presets' or 'custom'
+let processTimeout = null;
+let spacePressed = false;
+let originalSliderPercent = 50;
+
+// Maximum dimensions for editing preview to maintain 60fps rendering
+const MAX_PREVIEW_LIMIT = 800;
+
+// DOM Elements
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+const fileInfo = document.getElementById('file-info');
+const fileName = document.getElementById('file-name');
+const btnRemoveFile = document.getElementById('btn-remove-file');
+
+const workspaceEmpty = document.getElementById('workspace-empty');
+const workspaceEditor = document.getElementById('workspace-editor');
+const btnBrowseTrigger = document.getElementById('btn-browse-trigger');
+const btnSampleTrigger = document.getElementById('btn-sample-trigger');
+
+const canvasBefore = document.getElementById('canvas-before');
+const canvasAfter = document.getElementById('canvas-after');
+const ctxBefore = canvasBefore.getContext('2d');
+const ctxAfter = canvasAfter.getContext('2d');
+
+const comparisonSlider = document.getElementById('comparison-slider');
+const afterPanel = document.getElementById('after-panel');
+const sliderHandle = document.getElementById('slider-handle');
+
+// Sliders and Selects
+const rangePixelSize = document.getElementById('range-pixel-size');
+const valPixelSize = document.getElementById('val-pixel-size');
+
+const tabPresets = document.getElementById('tab-presets');
+const tabCustom = document.getElementById('tab-custom');
+const tabContentPresets = document.getElementById('tab-content-presets');
+const tabContentCustom = document.getElementById('tab-content-custom');
+const selectPreset = document.getElementById('select-preset');
+const rangeColorLimit = document.getElementById('range-color-limit');
+const valColorLimit = document.getElementById('val-color-limit');
+const paletteColorsPreview = document.getElementById('palette-colors-preview');
+
+const selectDither = document.getElementById('select-dither');
+const rangeDitherWeight = document.getElementById('range-dither-weight');
+const valDitherWeight = document.getElementById('val-dither-weight');
+
+const rangeBrightness = document.getElementById('range-brightness');
+const valBrightness = document.getElementById('val-brightness');
+const rangeContrast = document.getElementById('range-contrast');
+const valContrast = document.getElementById('val-contrast');
+const rangeSaturation = document.getElementById('range-saturation');
+const valSaturation = document.getElementById('val-saturation');
+const rangeSharpness = document.getElementById('range-sharpness');
+const valSharpness = document.getElementById('val-sharpness');
+
+const btnDownload = document.getElementById('btn-download');
+const btnReset = document.getElementById('btn-reset');
+
+const statusResolution = document.getElementById('status-resolution');
+const statusColorsUsed = document.getElementById('status-colors-used');
+
+/* ==========================================================================
+   Initialization and Event Handling
+   ========================================================================== */
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupUploadListeners();
+  setupSlidersAndControls();
+  setupComparisonSlider();
+  setupGlobalShortcuts();
+  renderPalettePreview();
+});
+
+// Reset logic
+btnReset.addEventListener('click', () => {
+  rangePixelSize.value = 8;
+  selectPreset.value = 'gb-classic';
+  rangeColorLimit.value = 16;
+  selectDither.value = 'bayer-4x4';
+  rangeDitherWeight.value = 80;
+  rangeBrightness.value = 0;
+  rangeContrast.value = 0;
+  rangeSaturation.value = 0;
+  rangeSharpness.value = 0;
+  
+  // Set tab to presets
+  switchPaletteTab('presets');
+  
+  // Trigger update updates
+  updateSliderLabels();
+  renderPalettePreview();
+  triggerPipeline();
+  
+  showToast('Settings reset to default', 'success');
+});
+
+// Download Logic
+btnDownload.addEventListener('click', () => {
+  if (!sourceImage) return;
+  
+  showToast('Rendering high resolution download...', 'success');
+  
+  // Run high-resolution render asynchronously so UI doesn't freeze
+  setTimeout(() => {
+    try {
+      const pixelSize = parseInt(rangePixelSize.value);
+      
+      // Calculate true output size (original dimensions divided by pixel size)
+      const downloadPixelatedW = Math.max(2, Math.round(sourceImage.width / pixelSize));
+      const downloadPixelatedH = Math.max(2, Math.round(sourceImage.height / pixelSize));
+      
+      // Create offscreen high-res canvases
+      const smallCanvas = document.createElement('canvas');
+      smallCanvas.width = downloadPixelatedW;
+      smallCanvas.height = downloadPixelatedH;
+      const smallCtx = smallCanvas.getContext('2d');
+      
+      // Draw full image downscaled
+      smallCtx.drawImage(sourceImage, 0, 0, downloadPixelatedW, downloadPixelatedH);
+      const imgData = smallCtx.getImageData(0, 0, downloadPixelatedW, downloadPixelatedH);
+      
+      // Process pipeline at full size
+      processImageData(imgData.data, downloadPixelatedW, downloadPixelatedH);
+      smallCtx.putImageData(imgData, 0, 0);
+      
+      // Upscale back to full size for sharp download
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = downloadPixelatedW * pixelSize;
+      exportCanvas.height = downloadPixelatedH * pixelSize;
+      const exportCtx = exportCanvas.getContext('2d');
+      
+      exportCtx.imageSmoothingEnabled = false;
+      exportCtx.mozImageSmoothingEnabled = false;
+      exportCtx.webkitImageSmoothingEnabled = false;
+      exportCtx.msImageSmoothingEnabled = false;
+      exportCtx.drawImage(smallCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
+      
+      // Convert to blob and download
+      exportCanvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cgtools-pixelart-${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Image downloaded successfully!', 'success');
+      }, 'image/png');
+      
+    } catch (err) {
+      console.error(err);
+      showToast('Export failed. Try a smaller image.', 'error');
+    }
+  }, 100);
+});
+
+/* ==========================================================================
+   File Loading & Sample Image Generation
+   ========================================================================== */
+
+function setupUploadListeners() {
+  // Click dropzone to browse
+  btnBrowseTrigger.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('click', (e) => {
+    if (e.target !== btnBrowseTrigger && e.target !== document.querySelector('.browse-link')) {
+      fileInput.click();
+    }
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      handleFile(e.target.files[0]);
+    }
+  });
+
+  // Drag & drop
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    }, false);
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+    }, false);
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if (files.length > 0) {
+      handleFile(files[0]);
+    }
+  });
+
+  btnRemoveFile.addEventListener('click', () => {
+    sourceImage = null;
+    fileInput.value = '';
+    workspaceEditor.classList.add('hidden');
+    workspaceEmpty.classList.remove('hidden');
+    fileInfo.classList.add('hidden');
+    btnDownload.disabled = true;
+  });
+
+  // Load sample image
+  btnSampleTrigger.addEventListener('click', () => {
+    loadSampleImage();
+  });
+}
+
+function handleFile(file) {
+  if (!file.type.startsWith('image/')) {
+    showToast('Invalid file format. Please upload an image.', 'error');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      sourceImage = img;
+      fileName.textContent = file.name;
+      fileInfo.classList.remove('hidden');
+      setupWorkspace();
+      showToast('Image loaded successfully!', 'success');
+    };
+    img.onerror = () => {
+      showToast('Error loading image.', 'error');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Generate an offline retro Vaporwave/Synthwave scene dynamically using 2D Canvas
+function loadSampleImage() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 800;
+  canvas.height = 600;
+  const ctx = canvas.getContext('2d');
+
+  // Background gradient (Deep Space Violet/Blue)
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, 600);
+  bgGrad.addColorStop(0, '#0d0221');
+  bgGrad.addColorStop(0.5, '#0f0826');
+  bgGrad.addColorStop(1, '#2f1154');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, 800, 600);
+
+  // Draw some stars
+  ctx.fillStyle = '#ffffff';
+  for (let i = 0; i < 60; i++) {
+    const x = Math.random() * 800;
+    const y = Math.random() * 320;
+    const size = Math.random() * 2 + 0.5;
+    ctx.globalAlpha = Math.random();
+    ctx.fillRect(x, y, size, size);
+  }
+  ctx.globalAlpha = 1.0;
+
+  // Draw Cyber Sun (Retro stripes)
+  const sunX = 400;
+  const sunY = 280;
+  const sunR = 120;
+  const sunGrad = ctx.createLinearGradient(0, sunY - sunR, 0, sunY + sunR);
+  sunGrad.addColorStop(0, '#ffec27');
+  sunGrad.addColorStop(0.5, '#ff007f');
+  sunGrad.addColorStop(1, '#7e2553');
+  ctx.fillStyle = sunGrad;
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Stripe cutouts in the sun (vaporwave aesthetic)
+  ctx.fillStyle = '#0f0826';
+  for (let y = sunY - 40; y < sunY + sunR; y += 12) {
+    const height = Math.max(1, (y - (sunY - 40)) / 10 + 1.5);
+    ctx.fillRect(sunX - sunR - 10, y, sunR * 2 + 20, height);
+  }
+
+  // Draw Neon Silhouette Mountains
+  ctx.fillStyle = '#180736';
+  ctx.beginPath();
+  ctx.moveTo(0, 360);
+  ctx.lineTo(150, 240);
+  ctx.lineTo(300, 360);
+  ctx.lineTo(480, 200);
+  ctx.lineTo(650, 360);
+  ctx.lineTo(800, 360);
+  ctx.lineTo(800, 600);
+  ctx.lineTo(0, 600);
+  ctx.fill();
+
+  // Mountain Neon stroke
+  ctx.strokeStyle = '#ec4899';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, 360);
+  ctx.lineTo(150, 240);
+  ctx.lineTo(300, 360);
+  ctx.lineTo(480, 200);
+  ctx.lineTo(650, 360);
+  ctx.lineTo(800, 360);
+  ctx.stroke();
+
+  // Foreground Grid Floor
+  const gridY = 360;
+  ctx.fillStyle = '#080114';
+  ctx.fillRect(0, gridY, 800, 240);
+
+  // Perspective Grid Lines
+  ctx.strokeStyle = '#00f0ff';
+  ctx.lineWidth = 1.5;
+  const numLines = 18;
+  for (let i = 0; i <= numLines; i++) {
+    const startX = (i / numLines) * 800;
+    const endX = -400 + (i / numLines) * 1600; // expand at the bottom
+    ctx.beginPath();
+    ctx.moveTo(startX, gridY);
+    ctx.lineTo(endX, 600);
+    ctx.stroke();
+  }
+
+  // Horizontal Grid Lines (narrowing to the horizon)
+  for (let y = gridY; y < 600; y += 15) {
+    // Math to get nice acceleration spacing
+    const progress = (y - gridY) / 240;
+    const spacing = gridY + (progress ** 1.8) * 240;
+    ctx.beginPath();
+    ctx.moveTo(0, spacing);
+    ctx.lineTo(800, spacing);
+    ctx.stroke();
+  }
+
+  // Glow sphere overlay on top of grid lines
+  const groundGlow = ctx.createLinearGradient(0, gridY, 0, 600);
+  groundGlow.addColorStop(0, 'rgba(0, 240, 255, 0.25)');
+  groundGlow.addColorStop(0.4, 'rgba(236, 72, 153, 0.08)');
+  groundGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = groundGlow;
+  ctx.fillRect(0, gridY, 800, 240);
+
+  // Convert canvas to Image
+  const img = new Image();
+  img.onload = () => {
+    sourceImage = img;
+    fileName.textContent = 'synthwave_sample.png';
+    fileInfo.classList.remove('hidden');
+    setupWorkspace();
+    showToast('Loaded sample image', 'success');
+  };
+  img.src = canvas.toDataURL('image/png');
+}
+
+/* ==========================================================================
+   Workspace Render & Pipelines
+   ========================================================================== */
+
+function setupWorkspace() {
+  workspaceEmpty.classList.add('hidden');
+  workspaceEditor.classList.remove('hidden');
+  btnDownload.disabled = false;
+  
+  // Set up preview sizes matching aspect ratio
+  const ratio = sourceImage.width / sourceImage.height;
+  
+  let previewW = sourceImage.width;
+  let previewH = sourceImage.height;
+  
+  if (previewW > MAX_PREVIEW_LIMIT || previewH > MAX_PREVIEW_LIMIT) {
+    if (ratio > 1) {
+      previewW = MAX_PREVIEW_LIMIT;
+      previewH = Math.round(MAX_PREVIEW_LIMIT / ratio);
+    } else {
+      previewH = MAX_PREVIEW_LIMIT;
+      previewW = Math.round(MAX_PREVIEW_LIMIT * ratio);
+    }
+  }
+  
+  // Size canvases exactly the same
+  canvasBefore.width = previewW;
+  canvasBefore.height = previewH;
+  canvasAfter.width = previewW;
+  canvasAfter.height = previewH;
+  
+  // Draw before canvas
+  ctxBefore.drawImage(sourceImage, 0, 0, previewW, previewH);
+  
+  // Reset slider handle to center
+  updateSlider(50);
+  
+  // Run pixel art conversion
+  runPipeline();
+}
+
+// Triggers pipeline with debounce (keeps slider dragging extremely fast)
+function triggerPipeline() {
+  if (!sourceImage) return;
+  
+  if (processTimeout) {
+    clearTimeout(processTimeout);
+  }
+  
+  processTimeout = setTimeout(() => {
+    runPipeline();
+  }, 16); // ~60fps debounce window
+}
+
+function runPipeline() {
+  if (!sourceImage) return;
+  
+  const startTime = performance.now();
+  const pixelSize = parseInt(rangePixelSize.value);
+  const w = canvasAfter.width;
+  const h = canvasAfter.height;
+  
+  // Calculate small processing width/height
+  const pixelatedW = Math.max(2, Math.round(w / pixelSize));
+  const pixelatedH = Math.max(2, Math.round(h / pixelSize));
+  
+  // Update status bar resolution
+  statusResolution.textContent = `${sourceImage.width} × ${sourceImage.height} px (${pixelatedW} × ${pixelatedH} blocks)`;
+  
+  // Create small offscreen canvas to scale down
+  const smallCanvas = document.createElement('canvas');
+  smallCanvas.width = pixelatedW;
+  smallCanvas.height = pixelatedH;
+  const smallCtx = smallCanvas.getContext('2d');
+  
+  // Draw the before-canvas contents scaled down
+  smallCtx.drawImage(canvasBefore, 0, 0, pixelatedW, pixelatedH);
+  const imgData = smallCtx.getImageData(0, 0, pixelatedW, pixelatedH);
+  
+  // Process colors/dithering on raw downscaled pixel array
+  const uniqueColorCount = processImageData(imgData.data, pixelatedW, pixelatedH);
+  
+  // Update status bar unique colors
+  statusColorsUsed.textContent = `${uniqueColorCount} unique colors used`;
+  
+  // Put data back and render to preview canvas
+  smallCtx.putImageData(imgData, 0, 0);
+  
+  ctxAfter.imageSmoothingEnabled = false;
+  ctxAfter.mozImageSmoothingEnabled = false;
+  ctxAfter.webkitImageSmoothingEnabled = false;
+  ctxAfter.msImageSmoothingEnabled = false;
+  
+  ctxAfter.clearRect(0, 0, w, h);
+  ctxAfter.drawImage(smallCanvas, 0, 0, w, h);
+  
+  const timeTaken = (performance.now() - startTime).toFixed(1);
+  console.log(`Pipeline complete in ${timeTaken}ms`);
+}
+
+/* ==========================================================================
+   Core Image Processing & Math Algorithms
+   ========================================================================== */
+
+function processImageData(data, width, height) {
+  const brightness = parseInt(rangeBrightness.value);
+  const contrast = parseInt(rangeContrast.value);
+  const saturation = parseInt(rangeSaturation.value);
+  const sharpness = parseInt(rangeSharpness.value);
+  
+  // 1. Sharpen Filter (Applied first on the low-res cells to define borders)
+  if (sharpness > 0) {
+    applySharpen(data, width, height, sharpness);
+  }
+  
+  // 2. Adjustments (Brightness, Contrast, Saturation)
+  applyAdjustments(data, brightness, contrast, saturation);
+  
+  // 3. Palette Setup
+  let palette = [];
+  const presetMode = currentPaletteTab === 'presets';
+  const presetType = selectPreset.value;
+  
+  if (presetMode) {
+    if (presetType === 'none') {
+      // If "No Limit" is selected, we bypass mapping/dithering steps
+      // Count unique colors directly
+      return countUniqueColors(data);
+    }
+    palette = PALETTES[presetType] || PALETTES['gb-classic'];
+  } else {
+    // Generate KMeans palette dynamically based on image content
+    const k = parseInt(rangeColorLimit.value);
+    palette = generateKMeansPalette(data, k);
+  }
+  
+  // 4. Color Quantization + Dithering
+  const ditherType = selectDither.value;
+  const ditherWeight = parseInt(rangeDitherWeight.value) / 100;
+  
+  if (ditherType.startsWith('bayer')) {
+    const is8x8 = ditherType === 'bayer-8x8';
+    applyBayerDithering(data, width, height, palette, ditherWeight, is8x8);
+  } else if (ditherType === 'floyd-steinberg') {
+    applyFloydSteinbergDithering(data, width, height, palette, ditherWeight);
+  } else {
+    // None / Flat blocks mapping
+    applyNearestPaletteColor(data, palette);
+  }
+  
+  // Final count of colors
+  return countUniqueColors(data);
+}
+
+// Standard convolution edge-sharpening
+function applySharpen(data, width, height, amount) {
+  const mix = amount / 100; 
+  const s = mix * 0.45; // cap kernel strength
+  const w = 1 + 4 * s;
+  const original = new Uint8ClampedArray(data);
+  
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const idx = (y * width + x) * 4;
+      
+      for (let c = 0; c < 3; c++) {
+        const top = ((y - 1) * width + x) * 4 + c;
+        const bottom = ((y + 1) * width + x) * 4 + c;
+        const left = (y * width + (x - 1)) * 4 + c;
+        const right = (y * width + (x + 1)) * 4 + c;
+        const center = idx + c;
+        
+        let val = original[center] * w - (original[top] + original[bottom] + original[left] + original[right]) * s;
+        data[center] = val < 0 ? 0 : (val > 255 ? 255 : val);
+      }
+    }
+  }
+}
+
+// Adjust basic image parameters
+function applyAdjustments(data, brightness, contrast, saturation) {
+  const b = brightness * 2.55; // convert -100..100 scale to pixel space
+  const cFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+  const sFactor = 1 + (saturation / 100);
+  
+  for (let i = 0; i < data.length; i += 4) {
+    let r = data[i];
+    let g = data[i+1];
+    let bVal = data[i+2];
+    
+    // Brightness
+    if (brightness !== 0) {
+      r += b;
+      g += b;
+      bVal += b;
+    }
+    
+    // Contrast
+    if (contrast !== 0) {
+      r = cFactor * (r - 128) + 128;
+      g = cFactor * (g - 128) + 128;
+      bVal = cFactor * (bVal - 128) + 128;
+    }
+    
+    // Saturation
+    if (saturation !== 0) {
+      const L = 0.299 * r + 0.587 * g + 0.114 * bVal; // luminance formula
+      r = L + (r - L) * sFactor;
+      g = L + (g - L) * sFactor;
+      bVal = L + (bVal - L) * sFactor;
+    }
+    
+    // Clamp values
+    data[i] = r < 0 ? 0 : (r > 255 ? 255 : r);
+    data[i+1] = g < 0 ? 0 : (g > 255 ? 255 : g);
+    data[i+2] = bVal < 0 ? 0 : (bVal > 255 ? 255 : bVal);
+  }
+}
+
+// Fast K-Means Palette Generation
+function generateKMeansPalette(pixels, k) {
+  const samples = [];
+  const step = Math.max(1, Math.floor(pixels.length / 4 / 1200)); // Sample ~1200 pixels
+  for (let i = 0; i < pixels.length; i += 4 * step) {
+    samples.push([pixels[i], pixels[i+1], pixels[i+2]]);
+  }
+  
+  if (samples.length === 0) return [[0,0,0], [255,255,255]];
+  
+  // Pick random samples for initial centers
+  let centroids = [];
+  for (let i = 0; i < k; i++) {
+    const randomIdx = Math.floor(Math.random() * samples.length);
+    centroids.push([...samples[randomIdx]]);
+  }
+  
+  // Run 3 iterations (keeps it sub-millisecond)
+  for (let iter = 0; iter < 3; iter++) {
+    const clusters = Array.from({ length: k }, () => []);
+    
+    for (let i = 0; i < samples.length; i++) {
+      const sample = samples[i];
+      let minDist = Infinity;
+      let closestIdx = 0;
+      
+      for (let j = 0; j < k; j++) {
+        const c = centroids[j];
+        const dist = (sample[0] - c[0])**2 + (sample[1] - c[1])**2 + (sample[2] - c[2])**2;
+        if (dist < minDist) {
+          minDist = dist;
+          closestIdx = j;
+        }
+      }
+      clusters[closestIdx].push(sample);
+    }
+    
+    for (let j = 0; j < k; j++) {
+      const cluster = clusters[j];
+      if (cluster.length > 0) {
+        let sumR = 0, sumG = 0, sumB = 0;
+        for (let p = 0; p < cluster.length; p++) {
+          sumR += cluster[p][0];
+          sumG += cluster[p][1];
+          sumB += cluster[p][2];
+        }
+        centroids[j] = [
+          Math.round(sumR / cluster.length),
+          Math.round(sumG / cluster.length),
+          Math.round(sumB / cluster.length)
+        ];
+      } else {
+        // Handle empty cluster
+        const randomIdx = Math.floor(Math.random() * samples.length);
+        centroids[j] = [...samples[randomIdx]];
+      }
+    }
+  }
+  return centroids;
+}
+
+// Flat palette replacement (No dithering)
+function applyNearestPaletteColor(data, palette) {
+  const cache = new Map();
+  
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i+1];
+    const b = data[i+2];
+    
+    const key = (r << 16) | (g << 8) | b;
+    let closest;
+    
+    if (cache.has(key)) {
+      closest = cache.get(key);
+    } else {
+      let minDist = Infinity;
+      closest = palette[0];
+      for (let j = 0; j < palette.length; j++) {
+        const c = palette[j];
+        const dist = (r - c[0])**2 + (g - c[1])**2 + (b - c[2])**2;
+        if (dist < minDist) {
+          minDist = dist;
+          closest = c;
+        }
+      }
+      cache.set(key, closest);
+    }
+    
+    data[i]   = closest[0];
+    data[i+1] = closest[1];
+    data[i+2] = closest[2];
+  }
+}
+
+// Bayer (Ordered Grid) Dithering
+function applyBayerDithering(data, width, height, palette, ditherWeight, is8x8) {
+  const matrix = is8x8 ? BAYER_8X8 : BAYER_4X4;
+  const modSize = is8x8 ? 8 : 4;
+  const normFactor = is8x8 ? 64 : 16;
+  const cache = new Map();
+  
+  const step = 255 / Math.pow(palette.length, 1/3); // Scaling factor based on palette depth
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const r = data[idx];
+      const g = data[idx+1];
+      const b = data[idx+2];
+      
+      const threshold = (matrix[y % modSize][x % modSize] / normFactor) - 0.5;
+      const offset = threshold * ditherWeight * step;
+      
+      const adjR = Math.max(0, Math.min(255, Math.round(r + offset)));
+      const adjG = Math.max(0, Math.min(255, Math.round(g + offset)));
+      const adjB = Math.max(0, Math.min(255, Math.round(b + offset)));
+      
+      const key = (adjR << 16) | (adjG << 8) | adjB;
+      let closest;
+      
+      if (cache.has(key)) {
+        closest = cache.get(key);
+      } else {
+        let minDist = Infinity;
+        closest = palette[0];
+        for (let j = 0; j < palette.length; j++) {
+          const c = palette[j];
+          const dist = (adjR - c[0])**2 + (adjG - c[1])**2 + (adjB - c[2])**2;
+          if (dist < minDist) {
+            minDist = dist;
+            closest = c;
+          }
+        }
+        cache.set(key, closest);
+      }
+      
+      data[idx]   = closest[0];
+      data[idx+1] = closest[1];
+      data[idx+2] = closest[2];
+    }
+  }
+}
+
+// Floyd-Steinberg Error Diffusion Dithering
+function applyFloydSteinbergDithering(data, width, height, palette, ditherWeight) {
+  const cache = new Map();
+  
+  // Allocate float buffer to prevent rounding drift during error dispersion
+  const buffer = new Float32Array(data.length);
+  for (let i = 0; i < data.length; i++) {
+    buffer[i] = data[i];
+  }
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      
+      const oldR = buffer[idx];
+      const oldG = buffer[idx+1];
+      const oldB = buffer[idx+2];
+      
+      const rClamped = Math.max(0, Math.min(255, Math.round(oldR)));
+      const gClamped = Math.max(0, Math.min(255, Math.round(oldG)));
+      const bClamped = Math.max(0, Math.min(255, Math.round(oldB)));
+      
+      const key = (rClamped << 16) | (gClamped << 8) | bClamped;
+      let closest;
+      
+      if (cache.has(key)) {
+        closest = cache.get(key);
+      } else {
+        let minDist = Infinity;
+        closest = palette[0];
+        for (let j = 0; j < palette.length; j++) {
+          const c = palette[j];
+          const dist = (rClamped - c[0])**2 + (gClamped - c[1])**2 + (bClamped - c[2])**2;
+          if (dist < minDist) {
+            minDist = dist;
+            closest = c;
+          }
+        }
+        cache.set(key, closest);
+      }
+      
+      const newR = closest[0];
+      const newG = closest[1];
+      const newB = closest[2];
+      
+      data[idx]   = newR;
+      data[idx+1] = newG;
+      data[idx+2] = newB;
+      
+      const errR = (oldR - newR) * ditherWeight;
+      const errG = (oldG - newG) * ditherWeight;
+      const errB = (oldB - newB) * ditherWeight;
+      
+      // Diffuse errors using classic 7/16, 3/16, 5/16, 1/16 coefficients
+      if (x + 1 < width) {
+        const nIdx = idx + 4;
+        buffer[nIdx]   += errR * (7/16);
+        buffer[nIdx+1] += errG * (7/16);
+        buffer[nIdx+2] += errB * (7/16);
+      }
+      
+      if (y + 1 < height) {
+        if (x - 1 >= 0) {
+          const nIdx = ((y + 1) * width + (x - 1)) * 4;
+          buffer[nIdx]   += errR * (3/16);
+          buffer[nIdx+1] += errG * (3/16);
+          buffer[nIdx+2] += errB * (3/16);
+        }
+        {
+          const nIdx = ((y + 1) * width + x) * 4;
+          buffer[nIdx]   += errR * (5/16);
+          buffer[nIdx+1] += errG * (5/16);
+          buffer[nIdx+2] += errB * (5/16);
+        }
+        if (x + 1 < width) {
+          const nIdx = ((y + 1) * width + (x + 1)) * 4;
+          buffer[nIdx]   += errR * (1/16);
+          buffer[nIdx+1] += errG * (1/16);
+          buffer[nIdx+2] += errB * (1/16);
+        }
+      }
+    }
+  }
+}
+
+// Utility to count exact unique colors on the canvas
+function countUniqueColors(data) {
+  const colors = new Set();
+  for (let i = 0; i < data.length; i += 4) {
+    const key = (data[i] << 16) | (data[i+1] << 8) | data[i+2];
+    colors.add(key);
+  }
+  return colors.size;
+}
+
+/* ==========================================================================
+   UI Helpers: Labels, Tabs and Custom Palette Previews
+   ========================================================================== */
+
+function setupSlidersAndControls() {
+  const sliders = [
+    { el: rangePixelSize, valEl: valPixelSize, suffix: 'px' },
+    { el: rangeColorLimit, valEl: valColorLimit, suffix: ' colors' },
+    { el: rangeDitherWeight, valEl: valDitherWeight, suffix: '%' },
+    { el: rangeBrightness, valEl: valBrightness, suffix: '%' },
+    { el: rangeContrast, valEl: valContrast, suffix: '%' },
+    { el: rangeSaturation, valEl: valSaturation, suffix: '%' },
+    { el: rangeSharpness, valEl: valSharpness, suffix: '%' }
+  ];
+
+  // Set up listeners for updating numbers next to range sliders
+  sliders.forEach(slider => {
+    slider.el.addEventListener('input', () => {
+      slider.valEl.textContent = `${slider.el.value}${slider.suffix}`;
+      triggerPipeline();
+    });
+  });
+
+  // Tab switcher for Palette types
+  tabPresets.addEventListener('click', () => switchPaletteTab('presets'));
+  tabCustom.addEventListener('click', () => switchPaletteTab('custom'));
+  
+  selectPreset.addEventListener('change', () => {
+    renderPalettePreview();
+    triggerPipeline();
+  });
+
+  selectDither.addEventListener('change', () => {
+    // Hide dither weight control if dithering is turned off
+    const parentRange = rangeDitherWeight.closest('.range-container');
+    if (selectDither.value === 'none') {
+      parentRange.classList.add('hidden');
+    } else {
+      parentRange.classList.remove('hidden');
+    }
+    triggerPipeline();
+  });
+}
+
+function updateSliderLabels() {
+  valPixelSize.textContent = `${rangePixelSize.value}px`;
+  valColorLimit.textContent = `${rangeColorLimit.value} colors`;
+  valDitherWeight.textContent = `${rangeDitherWeight.value}%`;
+  valBrightness.textContent = `${rangeBrightness.value}%`;
+  valContrast.textContent = `${rangeContrast.value}%`;
+  valSaturation.textContent = `${rangeSaturation.value}%`;
+  valSharpness.textContent = `${rangeSharpness.value}%`;
+  
+  const parentRange = rangeDitherWeight.closest('.range-container');
+  if (selectDither.value === 'none') {
+    parentRange.classList.add('hidden');
+  } else {
+    parentRange.classList.remove('hidden');
+  }
+}
+
+function switchPaletteTab(tabName) {
+  currentPaletteTab = tabName;
+  if (tabName === 'presets') {
+    tabPresets.classList.add('active');
+    tabCustom.classList.remove('active');
+    tabContentPresets.classList.remove('hidden');
+    tabContentCustom.classList.add('hidden');
+  } else {
+    tabPresets.classList.remove('active');
+    tabCustom.classList.add('active');
+    tabContentPresets.classList.add('hidden');
+    tabContentCustom.classList.remove('hidden');
+  }
+  triggerPipeline();
+}
+
+function renderPalettePreview() {
+  paletteColorsPreview.innerHTML = '';
+  const presetVal = selectPreset.value;
+  
+  if (presetVal === 'none' || !PALETTES[presetVal]) {
+    paletteColorsPreview.style.display = 'none';
+    return;
+  }
+  
+  paletteColorsPreview.style.display = 'grid';
+  const colors = PALETTES[presetVal];
+  
+  colors.forEach(rgb => {
+    const dot = document.createElement('div');
+    dot.className = 'palette-color-dot';
+    dot.style.backgroundColor = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+    dot.title = `RGB: ${rgb[0]}, ${rgb[1]}, ${rgb[2]}`;
+    paletteColorsPreview.appendChild(dot);
+  });
+}
+
+/* ==========================================================================
+   Interactive Comparison Slider & Keyboard Shortcuts
+   ========================================================================== */
+
+function setupComparisonSlider() {
+  let isDragging = false;
+
+  function onDragStart(e) {
+    isDragging = true;
+    e.preventDefault();
+  }
+
+  function onDragEnd() {
+    isDragging = false;
+  }
+
+  function onDrag(e) {
+    if (!isDragging || !sourceImage) return;
+    
+    const rect = comparisonSlider.getBoundingClientRect();
+    let clientX = e.clientX;
+    
+    // Touch support
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+    }
+    
+    const x = clientX - rect.left;
+    const percent = (x / rect.width) * 100;
+    updateSlider(percent);
+  }
+
+  // Mouse Listeners
+  comparisonSlider.addEventListener('mousedown', onDragStart);
+  window.addEventListener('mouseup', onDragEnd);
+  window.addEventListener('mousemove', onDrag);
+
+  // Touch Listeners
+  comparisonSlider.addEventListener('touchstart', onDragStart, { passive: true });
+  window.addEventListener('touchend', onDragEnd);
+  window.addEventListener('touchmove', onDrag, { passive: true });
+}
+
+function updateSlider(percent) {
+  percent = Math.max(0, Math.min(100, percent));
+  sliderHandle.style.left = `${percent}%`;
+  afterPanel.style.clipPath = `polygon(${percent}% 0, 100% 0, 100% 100%, ${percent}% 100%)`;
+  
+  // Store percent unless space is held
+  if (!spacePressed) {
+    originalSliderPercent = percent;
+  }
+}
+
+// Hotkeys like Spacebar to show original
+function setupGlobalShortcuts() {
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && !spacePressed && sourceImage) {
+      // If user is focused on an input/select, don't hijack keyboard space
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        return;
+      }
+      e.preventDefault();
+      spacePressed = true;
+      
+      // Temporarily hide pixel art by sliding handle to 100% (reveals only original left panel)
+      updateSlider(100);
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space' && spacePressed && sourceImage) {
+      spacePressed = false;
+      // Restore previous handle percentage
+      updateSlider(originalSliderPercent);
+    }
+  });
+}
