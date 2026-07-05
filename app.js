@@ -254,28 +254,42 @@ function setupUploadListeners() {
     }
   });
 
-  // Drag & drop
+  // Drag & drop handlers
   ['dragenter', 'dragover'].forEach(eventName => {
     dropzone.addEventListener(eventName, (e) => {
       e.preventDefault();
+      e.stopPropagation();
       dropzone.classList.add('dragover');
     }, false);
   });
 
-  ['dragleave', 'drop'].forEach(eventName => {
+  ['dragleave'].forEach(eventName => {
     dropzone.addEventListener(eventName, (e) => {
       e.preventDefault();
+      e.stopPropagation();
       dropzone.classList.remove('dragover');
     }, false);
   });
 
   dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropzone.classList.remove('dragover');
+    
     const dt = e.dataTransfer;
     const files = dt.files;
     if (files.length > 0) {
       handleFile(files[0]);
     }
   });
+
+  // Global window drag and drop blocks (prevents page redirect if missed dropzone)
+  window.addEventListener('dragover', (e) => {
+    e.preventDefault();
+  }, false);
+  window.addEventListener('drop', (e) => {
+    e.preventDefault();
+  }, false);
 
   btnRemoveFile.addEventListener('click', () => {
     sourceImage = null;
