@@ -20,7 +20,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
   
   <!-- Stylesheets -->
-  <link rel="stylesheet" href="./styles.css?v=0.29">
+  <link rel="stylesheet" href="./styles.css?v=0.30">
 </head>
 <body>
   <!-- Update Notification Banner -->
@@ -42,7 +42,7 @@
       <div class="header-brand">
         <img src="./logo.svg" alt="cgTools Logo" class="brand-logo">
         <div class="brand-text">
-          <h1>cgTools <span class="app-version">v0.29</span></h1>
+          <h1>cgTools <span class="app-version">v0.30</span></h1>
           <span class="brand-tagline">creative &amp; time-saving utilities</span>
         </div>
       </div>
@@ -348,15 +348,24 @@
                 </select>
               </div>
               <div id="palette-colors-preview" class="palette-preview-grid">
-                <!-- Color dots will be rendered here dynamically -->
-              </div>
             </div>
 
             <!-- Custom Color Depth Content -->
-            <div id="tab-content-custom" class="tab-content">
+            <div id="tab-content-custom" class="tab-content active margin-top-sm">
               <div class="range-container">
                 <div class="range-header">
-                  <span>Color Limit</span>
+                  <label for="select-algorithm">Generation Method</label>
+                </div>
+                <div class="select-container margin-bottom-sm">
+                  <select id="select-algorithm" class="custom-select">
+                    <option value="median-cut" selected>High Quality (Median Cut)</option>
+                    <option value="k-means">Fast (K-Means Clustering)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="range-container">
+                <div class="range-header">
+                  <label for="range-color-limit">Max Colors</label>
                   <div class="input-with-suffix">
                     <input type="number" id="val-color-limit" class="val-input" value="30" min="2" max="256">
                     <span class="val-suffix">colors</span>
@@ -463,6 +472,17 @@
                 </div>
               </div>
               <input type="range" id="range-sharpness" min="0" max="100" value="20" step="10" class="slider">
+            </div>
+            
+            <div class="range-container margin-top-sm">
+              <div class="range-header">
+                <label for="range-edge">Outline Intensity (Sobel)</label>
+                <div class="input-with-suffix">
+                  <input type="number" id="val-edge" class="val-input" value="0" min="0" max="100">
+                  <span class="val-suffix">%</span>
+                </div>
+              </div>
+              <input type="range" id="range-edge" min="0" max="100" value="0" step="5" class="slider">
             </div>
           </section>
 
@@ -688,7 +708,7 @@
     <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
   </div>
-  <script src="app.js?v=0.29"></script>
+  <script src="app.js?v=0.30"></script>
   <script>
     // Offline status detection
     const offlineIndicator = document.getElementById('offline-indicator');

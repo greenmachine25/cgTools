@@ -166,6 +166,7 @@ const tabCustom = document.getElementById('tab-custom');
 const tabContentPresets = document.getElementById('tab-content-presets');
 const tabContentCustom = document.getElementById('tab-content-custom');
 const selectPreset = document.getElementById('select-preset');
+const selectAlgorithm = document.getElementById('select-algorithm');
 const rangeColorLimit = document.getElementById('range-color-limit');
 const valColorLimit = document.getElementById('val-color-limit');
 const rangeColorTolerance = document.getElementById('range-color-tolerance');
@@ -184,6 +185,8 @@ const rangeSaturation = document.getElementById('range-saturation');
 const valSaturation = document.getElementById('val-saturation');
 const rangeSharpness = document.getElementById('range-sharpness');
 const valSharpness = document.getElementById('val-sharpness');
+const rangeEdge = document.getElementById('range-edge');
+const valEdge = document.getElementById('val-edge');
 
 const btnDownload = document.getElementById('btn-download');
 const btnReset = document.getElementById('btn-reset');
@@ -211,14 +214,16 @@ document.addEventListener('DOMContentLoaded', () => {
 btnReset.addEventListener('click', () => {
   rangeResolution.value = 256;
   selectPreset.value = 'none';
+  selectAlgorithm.value = 'median-cut';
   rangeColorLimit.value = 30;
   rangeColorTolerance.value = 0;
   selectDither.value = 'none';
   rangeDitherWeight.value = 80;
   rangeBrightness.value = 0;
-  rangeContrast.value = 15;
-  rangeSaturation.value = 15;
+  rangeContrast.value = 0;
+  rangeSaturation.value = 0;
   rangeSharpness.value = 20;
+  rangeEdge.value = 0;
   
   // Set tab to custom depth
   switchPaletteTab('custom');
@@ -619,6 +624,11 @@ function processImageData(data, width, height) {
     applySharpen(data, width, height, sharpness);
   }
   
+  const edgeStrength = parseInt(rangeEdge.value);
+  if (edgeStrength > 0) {
+    applySobelEdgeDetection(data, width, height, edgeStrength);
+  }
+  
   // 2. Adjustments (Brightness, Contrast, Saturation)
   applyAdjustments(data, brightness, contrast, saturation);
   
@@ -635,9 +645,14 @@ function processImageData(data, width, height) {
     }
     palette = PALETTES[presetType] || PALETTES['gb-classic'];
   } else {
-    // Generate KMeans palette dynamically based on image content
+    // Generate palette dynamically based on image content
     const k = parseInt(rangeColorLimit.value);
-    palette = generateKMeansPalette(data, k);
+    const alg = selectAlgorithm.value;
+    if (alg === 'median-cut') {
+      palette = generateMedianCutPalette(data, k);
+    } else {
+      palette = generateKMeansPalette(data, k);
+    }
   }
   
   const tolerance = parseInt(rangeColorTolerance.value) || 0;
@@ -728,27 +743,124 @@ function applyAdjustments(data, brightness, contrast, saturation) {
   }
 }
 
-// Fast K-Means Palette Generation
+function applySobelEdgeDetection(data, width, height, strengthPercent) {
+  if (strengthPercent <= 0) return;
+  const strength = strengthPercent / 100;
+  const original = new Uint8ClampedArray(data);
+  const getIdx = (x, y) => (y * width + x) * 4;
+  
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      let gx = 0; let gy = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const idx = getIdx(x + dx, y + dy);
+          const val = (original[idx] + original[idx+1] + original[idx+2]) / 3;
+          const xWeight = (dx === 0 ? 0 : dx) * (dy === 0 ? 2 : 1);
+          const yWeight = (dy === 0 ? 0 : dy) * (dx === 0 ? 2 : 1);
+          gx += val * xWeight;
+          gy += val * yWeight;
+        }
+      }
+      
+      const magnitude = Math.sqrt(gx*gx + gy*gy) * strength;
+      if (magnitude > 50) {
+        const factor = Math.max(0, 1 - (magnitude / 255));
+        const idx = getIdx(x, y);
+        data[idx] = data[idx] * factor;
+        data[idx+1] = data[idx+1] * factor;
+        data[idx+2] = data[idx+2] * factor;
+      }
+    }
+  }
+}
+
+function generateMedianCutPalette(pixels, k) {
+  const samples = [];
+  const step = Math.max(1, Math.floor(pixels.length / 4 / 2000)); 
+  for (let i = 0; i < pixels.length; i += 4 * step) {
+    samples.push([pixels[i], pixels[i+1], pixels[i+2]]);
+  }
+  if (samples.length === 0) return [[0,0,0], [255,255,255]];
+  
+  let boxes = [samples];
+  while (boxes.length < k) {
+    let targetBoxIdx = -1;
+    let maxRange = -1;
+    let maxAxis = 0;
+    
+    for (let i = 0; i < boxes.length; i++) {
+      let box = boxes[i];
+      if (box.length < 2) continue;
+      
+      let minR = 255, maxR = 0, minG = 255, maxG = 0, minB = 255, maxB = 0;
+      for (let c of box) {
+        if (c[0] < minR) minR = c[0]; if (c[0] > maxR) maxR = c[0];
+        if (c[1] < minG) minG = c[1]; if (c[1] > maxG) maxG = c[1];
+        if (c[2] < minB) minB = c[2]; if (c[2] > maxB) maxB = c[2];
+      }
+      
+      let rangeR = maxR - minR;
+      let rangeG = maxG - minG;
+      let rangeB = maxB - minB;
+      let currentMaxRange = Math.max(rangeR, rangeG, rangeB);
+      
+      if (currentMaxRange > maxRange) {
+        maxRange = currentMaxRange;
+        targetBoxIdx = i;
+        maxAxis = currentMaxRange === rangeR ? 0 : (currentMaxRange === rangeG ? 1 : 2);
+      }
+    }
+    
+    if (targetBoxIdx === -1) break;
+    
+    let targetBox = boxes[targetBoxIdx];
+    targetBox.sort((a, b) => a[maxAxis] - b[maxAxis]);
+    
+    let median = Math.floor(targetBox.length / 2);
+    boxes.splice(targetBoxIdx, 1, targetBox.slice(0, median), targetBox.slice(median));
+  }
+  
+  return boxes.map(box => {
+    let r = 0, g = 0, b = 0;
+    for (let c of box) { r += c[0]; g += c[1]; b += c[2]; }
+    let count = box.length || 1;
+    return [Math.round(r/count), Math.round(g/count), Math.round(b/count)];
+  });
+}
+
 function applyColorTolerance(palette, tolerancePercent) {
   if (tolerancePercent <= 0) return palette;
   const maxDistSq = Math.pow(441.67 * (tolerancePercent / 100), 2);
-  let mergedPalette = [];
+  let groups = [];
   
   for (let c of palette) {
-    let found = false;
-    for (let mc of mergedPalette) {
-      const distSq = (c[0]-mc[0])**2 + (c[1]-mc[1])**2 + (c[2]-mc[2])**2;
+    let foundGroup = null;
+    for (let g of groups) {
+      let avgR = g.sum[0] / g.count;
+      let avgG = g.sum[1] / g.count;
+      let avgB = g.sum[2] / g.count;
+      const distSq = (c[0]-avgR)**2 + (c[1]-avgG)**2 + (c[2]-avgB)**2;
       if (distSq <= maxDistSq) {
-        mc[0] = Math.round((mc[0] + c[0]) / 2);
-        mc[1] = Math.round((mc[1] + c[1]) / 2);
-        mc[2] = Math.round((mc[2] + c[2]) / 2);
-        found = true;
+        foundGroup = g;
         break;
       }
     }
-    if (!found) mergedPalette.push([...c]);
+    if (foundGroup) {
+      foundGroup.sum[0] += c[0];
+      foundGroup.sum[1] += c[1];
+      foundGroup.sum[2] += c[2];
+      foundGroup.count++;
+    } else {
+      groups.push({ sum: [...c], count: 1 });
+    }
   }
-  return mergedPalette;
+  
+  return groups.map(g => [
+    Math.round(g.sum[0] / g.count),
+    Math.round(g.sum[1] / g.count),
+    Math.round(g.sum[2] / g.count)
+  ]);
 }
 
 function generateKMeansPalette(pixels, k) {
@@ -1002,7 +1114,8 @@ function setupSlidersAndControls() {
     { el: rangeBrightness, valEl: valBrightness },
     { el: rangeContrast, valEl: valContrast },
     { el: rangeSaturation, valEl: valSaturation },
-    { el: rangeSharpness, valEl: valSharpness }
+    { el: rangeSharpness, valEl: valSharpness },
+    { el: rangeEdge, valEl: valEdge }
   ];
 
   // Set up listeners for updating numbers next to range sliders
@@ -1077,6 +1190,10 @@ function setupSlidersAndControls() {
     triggerPipeline();
   });
 
+  selectAlgorithm.addEventListener('change', () => {
+    triggerPipeline();
+  });
+  
   selectDither.addEventListener('change', () => {
     // Hide dither weight control if dithering is turned off
     const parentRange = rangeDitherWeight.closest('.range-container');
@@ -1111,6 +1228,7 @@ function updateSliderLabels() {
   valContrast.value = rangeContrast.value;
   valSaturation.value = rangeSaturation.value;
   valSharpness.value = rangeSharpness.value;
+  valEdge.value = rangeEdge.value;
   
   const parentRange = rangeDitherWeight.closest('.range-container');
   if (selectDither.value === 'none') {
@@ -1371,6 +1489,7 @@ function initSettingsProfiles() {
       resolution: rangeResolution.value,
       presetTab: currentPaletteTab,
       presetSelect: selectPreset.value,
+      selectAlgorithm: selectAlgorithm.value,
       colorLimit: rangeColorLimit.value,
       colorTolerance: rangeColorTolerance.value,
       dither: selectDither.value,
@@ -1378,7 +1497,8 @@ function initSettingsProfiles() {
       brightness: rangeBrightness.value,
       contrast: rangeContrast.value,
       saturation: rangeSaturation.value,
-      sharpness: rangeSharpness.value
+      sharpness: rangeSharpness.value,
+      edge: rangeEdge.value
     };
     
     const profiles = getSavedProfiles();
@@ -1437,6 +1557,7 @@ function applyProfile(p) {
     selectPreset.value = p.presetSelect;
     switchPaletteTab('presets');
   } else {
+    selectAlgorithm.value = p.selectAlgorithm || 'median-cut';
     rangeColorLimit.value = p.colorLimit;
     rangeColorTolerance.value = p.colorTolerance || 0;
     switchPaletteTab('custom');
@@ -1448,6 +1569,7 @@ function applyProfile(p) {
   rangeContrast.value = p.contrast;
   rangeSaturation.value = p.saturation;
   rangeSharpness.value = p.sharpness;
+  rangeEdge.value = p.edge || 0;
   
   updateSliderLabels();
   renderPalettePreview();
@@ -1729,7 +1851,7 @@ function initVizProfiles(updateCb) {
 }
 
 // Check for updates every 60s
-const CURRENT_VERSION = 'v0.29';
+const CURRENT_VERSION = 'v0.30';
 function checkForUpdates() {
   fetch('./index.html?t=' + Date.now())
     .then(r => r.text())
