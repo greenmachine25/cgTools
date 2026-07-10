@@ -1,3 +1,4 @@
+window.onerror = function(msg, url, lineNo, columnNo, error) { alert('Error: ' + msg + ' Line: ' + lineNo); return false; };
 /* ==========================================================================
    cgTools - Image to Pixel Art Converter Core Logic
    ========================================================================== */
@@ -122,9 +123,11 @@ const btnDeleteConfig = document.getElementById('btn-delete-config');
 const navVisualizer = document.getElementById('nav-visualizer');
 const navConverter = document.getElementById('nav-converter');
 const navCheckerboard = document.getElementById('nav-checkerboard');
+const nav3D = document.getElementById('nav-3d');
 const toolVisualizer = document.getElementById('tool-visualizer');
 const toolConverter = document.getElementById('tool-converter');
 const toolCheckerboard = document.getElementById('tool-checkerboard');
+const tool3D = document.getElementById('tool-3d');
 
 // Visualizer DOM
 const selectVizRes = document.getElementById('select-viz-res');
@@ -203,6 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSettingsProfiles();
   initVisualizer();
   initCheckerboard();
+  init3DTool();
   setupUploadListeners();
   setupSlidersAndControls();
   setupComparisonSlider();
@@ -2147,3 +2151,154 @@ function initCheckerboard() {
 
 
 
+
+
+
+/* ==========================================================================
+   3D Reference Tool
+   ========================================================================== */
+function init3DTool() {
+  const canvas3D = document.getElementById('canvas-3d');
+  if (!canvas3D) return;
+  const ctx3D = canvas3D.getContext('2d', { willReadFrequently: true });
+  const selectShape = document.getElementById('select-3d-shape');
+  const selectStyle = document.getElementById('select-3d-style');
+  const rangeSpeed = document.getElementById('range-3d-speed');
+  const valSpeed = document.getElementById('val-3d-speed');
+  const rangeRes = document.getElementById('range-3d-resolution');
+  const valRes = document.getElementById('val-3d-resolution');
+  
+  rangeSpeed.addEventListener('input', () => valSpeed.value = rangeSpeed.value);
+  rangeRes.addEventListener('input', () => valRes.value = rangeRes.value);
+  
+  let animationFrameId = null;
+  let angleX = 0;
+  let angleY = 0;
+  let is3DActive = false;
+  
+  const verticesCube = [
+    [-1,-1,-1], [1,-1,-1], [1,1,-1], [-1,1,-1],
+    [-1,-1,1], [1,-1,1], [1,1,1], [-1,1,1]
+  ];
+  const facesCube = [
+    [0,1,2,3], [1,5,6,2], [5,4,7,6], [4,0,3,7], [0,4,5,1], [3,2,6,7]
+  ];
+  const colorsCube = ["#FF5733", "#33FF57", "#3357FF", "#F033FF", "#FFF033", "#33FFF0"];
+  
+  const verticesPyr = [
+    [0,-1,0], [-1,1,-1], [1,1,-1], [1,1,1], [-1,1,1]
+  ];
+  const facesPyr = [
+    [0,1,2], [0,2,3], [0,3,4], [0,4,1], [1,4,3,2]
+  ];
+  const colorsPyr = ["#FF5733", "#33FF57", "#3357FF", "#F033FF", "#333333"];
+  
+  function project(vertex, angleX, angleY) {
+    let x = vertex[0], y = vertex[1], z = vertex[2];
+    
+    // Rotate Y
+    let temp = x * Math.cos(angleY) - z * Math.sin(angleY);
+    let nz = x * Math.sin(angleY) + z * Math.cos(angleY);
+    x = temp;
+    
+    // Rotate X
+    temp = y * Math.cos(angleX) - nz * Math.sin(angleX);
+    nz = y * Math.sin(angleX) + nz * Math.cos(angleX);
+    y = temp;
+    
+    const scale = 180;
+    // Perspective projection
+    const perspective = 300 / (300 + nz);
+    return {
+      x: x * scale * perspective + canvas3D.width / 2,
+      y: y * scale * perspective + canvas3D.height / 2,
+      z: nz
+    };
+  }
+  
+  function render3D() {
+    if (!is3DActive) return;
+    
+    ctx3D.fillStyle = '#0f0728'; // Match theme
+    ctx3D.fillRect(0, 0, canvas3D.width, canvas3D.height);
+    
+    const shape = selectShape.value;
+    const style = selectStyle.value;
+    const speed = parseInt(rangeSpeed.value) / 100;
+    
+    angleX += 0.02 * speed;
+    angleY += 0.03 * speed;
+    
+    const verts = shape === 'cube' ? verticesCube : verticesPyr;
+    const faces = shape === 'cube' ? facesCube : facesPyr;
+    const colors = shape === 'cube' ? colorsCube : colorsPyr;
+    
+    const projected = verts.map(v => project(v, angleX, angleY));
+    
+    const sortedFaces = faces.map((face, index) => {
+      const zAvg = face.reduce((sum, vIdx) => sum + projected[vIdx].z, 0) / face.length;
+      return { face, index, zAvg };
+    }).sort((a, b) => b.zAvg - a.zAvg); // Painter's Algorithm
+    
+    sortedFaces.forEach(({ face, index }) => {
+      ctx3D.beginPath();
+      ctx3D.moveTo(projected[face[0]].x, projected[face[0]].y);
+      for (let i = 1; i < face.length; i++) {
+        ctx3D.lineTo(projected[face[i]].x, projected[face[i]].y);
+      }
+      ctx3D.closePath();
+      
+      if (style === 'solid') {
+        ctx3D.fillStyle = colors[index];
+        ctx3D.fill();
+        ctx3D.strokeStyle = '#000000';
+        ctx3D.lineWidth = 1;
+        ctx3D.stroke();
+      } else {
+        ctx3D.strokeStyle = '#00FFFF';
+        ctx3D.lineWidth = 2;
+        ctx3D.stroke();
+      }
+    });
+    
+    // Feed 3D rendering into Pixel Art Pipeline!
+    sourceImage = canvas3D; // Mock image
+    
+    // Save current user resolution in Pixel tab
+    const originalRes = rangeResolution.value;
+    
+    // Override resolution for 3D processing
+    rangeResolution.value = rangeRes.value;
+    
+    // Put 3D content into canvasBefore
+    ctxBefore.clearRect(0, 0, canvasBefore.width, canvasBefore.height);
+    canvasBefore.width = 600;
+    canvasBefore.height = 600;
+    ctxBefore.drawImage(canvas3D, 0, 0, 600, 600);
+    
+    // Process the image
+    runPipeline();
+    
+    // Restore User's pixel tab resolution
+    rangeResolution.value = originalRes;
+    
+    animationFrameId = requestAnimationFrame(render3D);
+  }
+  
+  const nav3DLocal = document.getElementById('nav-3d');
+  if(nav3DLocal) {
+    nav3DLocal.addEventListener('click', () => {
+      is3DActive = true;
+      switchPaletteTab('custom'); // Show palette tools
+      render3D();
+    });
+  }
+  
+  [navVisualizer, navConverter, navCheckerboard].forEach(nav => {
+    if(!nav) return;
+    nav.addEventListener('click', () => {
+      is3DActive = false;
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    });
+  });
+}
