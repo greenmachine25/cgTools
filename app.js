@@ -191,6 +191,13 @@ const valSharpness = document.getElementById('val-sharpness');
 const rangeEdge = document.getElementById('range-edge');
 const valEdge = document.getElementById('val-edge');
 
+const checkRemoveBg = document.getElementById('check-remove-bg');
+const checkAddOutline = document.getElementById('check-add-outline');
+const outlineControls = document.getElementById('outline-controls');
+const colorOutline = document.getElementById('color-outline');
+const rangeOutlineSize = document.getElementById('range-outline-size');
+const valOutlineSize = document.getElementById('val-outline-size');
+
 const btnDownload = document.getElementById('btn-download');
 const btnReset = document.getElementById('btn-reset');
 
@@ -228,6 +235,11 @@ btnReset.addEventListener('click', () => {
   rangeSaturation.value = 0;
   rangeSharpness.value = 20;
   rangeEdge.value = 0;
+  checkRemoveBg.checked = false;
+  checkAddOutline.checked = false;
+  outlineControls.style.display = 'none';
+  colorOutline.value = '#ffffff';
+  rangeOutlineSize.value = 1;
   
   // Set tab to custom depth
   switchPaletteTab('custom');
@@ -268,20 +280,8 @@ btnDownload.addEventListener('click', () => {
       processImageData(imgData.data, downloadPixelatedW, downloadPixelatedH);
       smallCtx.putImageData(imgData, 0, 0);
       
-      // Upscale back to full size (original uploaded dimensions) for sharp download
-      const exportCanvas = document.createElement('canvas');
-      exportCanvas.width = sourceImage.width;
-      exportCanvas.height = sourceImage.height;
-      const exportCtx = exportCanvas.getContext('2d');
-      
-      exportCtx.imageSmoothingEnabled = false;
-      exportCtx.mozImageSmoothingEnabled = false;
-      exportCtx.webkitImageSmoothingEnabled = false;
-      exportCtx.msImageSmoothingEnabled = false;
-      exportCtx.drawImage(smallCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
-      
       // Convert to blob and download
-      exportCanvas.toBlob((blob) => {
+      smallCanvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -678,6 +678,15 @@ function processImageData(data, width, height) {
     applyNearestPaletteColor(data, palette);
   }
   
+    if (checkRemoveBg.checked) {
+    applyBackgroundRemoval(data, width, height);
+  }
+  if (checkAddOutline.checked) {
+    const thickness = parseInt(rangeOutlineSize.value);
+    const colorHex = colorOutline.value;
+    applyOuterOutline(data, width, height, thickness, colorHex);
+  }
+
   // Final count of colors
   return countUniqueColors(data);
 }
@@ -1119,7 +1128,8 @@ function setupSlidersAndControls() {
     { el: rangeContrast, valEl: valContrast },
     { el: rangeSaturation, valEl: valSaturation },
     { el: rangeSharpness, valEl: valSharpness },
-    { el: rangeEdge, valEl: valEdge }
+    { el: rangeEdge, valEl: valEdge },
+    { el: rangeOutlineSize, valEl: valOutlineSize }
   ];
 
   // Set up listeners for updating numbers next to range sliders
@@ -1233,6 +1243,7 @@ function updateSliderLabels() {
   valSaturation.value = rangeSaturation.value;
   valSharpness.value = rangeSharpness.value;
   valEdge.value = rangeEdge.value;
+  valOutlineSize.value = rangeOutlineSize.value;
   
   const parentRange = rangeDitherWeight.closest('.range-container');
   if (selectDither.value === 'none') {
@@ -2302,3 +2313,111 @@ function init3DTool() {
     });
   });
 }
+
+
+
+
+
+
+function applyBackgroundRemoval(data, width, height) {
+  // Use top-left pixel as the background color to remove
+  const bgR = data[0];
+  const bgG = data[1];
+  const bgB = data[2];
+
+  const tolerance = 5; 
+  const visited = new Uint8Array(width * height);
+  const queue = [{x: 0, y: 0}];
+  visited[0] = 1;
+
+  while (queue.length > 0) {
+    const {x, y} = queue.shift();
+    const idx = (y * width + x) * 4;
+    
+    // Set transparent
+    data[idx + 3] = 0; 
+    
+    // Check neighbors
+    const neighbors = [
+      {nx: x+1, ny: y}, {nx: x-1, ny: y},
+      {nx: x, ny: y+1}, {nx: x, ny: y-1}
+    ];
+
+    for (let {nx, ny} of neighbors) {
+      if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+        const nIdx = ny * width + nx;
+        if (!visited[nIdx]) {
+          const pxIdx = nIdx * 4;
+          const r = data[pxIdx];
+          const g = data[pxIdx+1];
+          const b = data[pxIdx+2];
+          
+          if (Math.abs(r - bgR) <= tolerance && Math.abs(g - bgG) <= tolerance && Math.abs(b - bgB) <= tolerance) {
+            visited[nIdx] = 1;
+            queue.push({x: nx, y: ny});
+          }
+        }
+      }
+    }
+  }
+}
+
+function applyOuterOutline(data, width, height, thickness, colorHex) {
+  // Convert hex to rgb
+  const hex = colorHex.replace('#', '');
+  const rOutline = parseInt(hex.substring(0,2), 16);
+  const gOutline = parseInt(hex.substring(2,4), 16);
+  const bOutline = parseInt(hex.substring(4,6), 16);
+
+  let currentAlpha = new Uint8Array(width * height);
+  for (let i = 0; i < width * height; i++) {
+    currentAlpha[i] = data[i * 4 + 3];
+  }
+
+  for (let t = 0; t < thickness; t++) {
+    const nextAlpha = new Uint8Array(currentAlpha);
+    const newOutlinePixels = [];
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        
+        // If current pixel is transparent
+        if (currentAlpha[idx] === 0) {
+          // Check neighbors
+          let hasOpaqueNeighbor = false;
+          const neighbors = [
+            {nx: x+1, ny: y}, {nx: x-1, ny: y},
+            {nx: x, ny: y+1}, {nx: x, ny: y-1}
+          ];
+          
+          for (let {nx, ny} of neighbors) {
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+              const nIdx = ny * width + nx;
+              if (currentAlpha[nIdx] > 0) {
+                hasOpaqueNeighbor = true;
+                break;
+              }
+            }
+          }
+
+          if (hasOpaqueNeighbor) {
+            newOutlinePixels.push(idx);
+          }
+        }
+      }
+    }
+
+    // Apply new outline pixels
+    for (let idx of newOutlinePixels) {
+      nextAlpha[idx] = 255;
+      data[idx * 4] = rOutline;
+      data[idx * 4 + 1] = gOutline;
+      data[idx * 4 + 2] = bOutline;
+      data[idx * 4 + 3] = 255;
+    }
+    
+    currentAlpha = nextAlpha;
+  }
+}
+
