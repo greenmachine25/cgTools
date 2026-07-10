@@ -1315,6 +1315,17 @@ function resetZoomPan() {
   applyZoomPan();
 }
 
+  checkRemoveBg.addEventListener('change', triggerPipeline);
+  checkAddOutline.addEventListener('change', () => {
+    if(checkAddOutline.checked) {
+      outlineControls.style.display = 'block';
+    } else {
+      outlineControls.style.display = 'none';
+    }
+    triggerPipeline();
+  });
+  colorOutline.addEventListener('input', triggerPipeline);
+
 function setupComparisonSlider() {
   let isDragging = false;
 
@@ -2420,4 +2431,5 @@ function applyOuterOutline(data, width, height, thickness, colorHex) {
     currentAlpha = nextAlpha;
   }
 }
+
 
