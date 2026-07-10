@@ -496,6 +496,43 @@
             </div>
           </section>
 
+          <section class="settings-group">
+            <h3 class="group-title">6. Transparency & Outline</h3>
+            
+            <div style="margin-bottom: 15px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #a19db3; font-size: 0.85rem;">
+                <input type="checkbox" id="check-remove-bg" style="accent-color: #00FFFF;">
+                Remove Background (Flood Fill from Edges)
+              </label>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #a19db3; font-size: 0.85rem;">
+                <input type="checkbox" id="check-add-outline" style="accent-color: #00FFFF;">
+                Add Outer Outline
+              </label>
+            </div>
+            
+            <div id="outline-controls" style="display: none;">
+              <div class="range-container margin-bottom-sm">
+                <div class="range-header">
+                  <label for="color-outline">Outline Color</label>
+                  <input type="color" id="color-outline" value="#ffffff" style="background:none; border:none; padding:0; width:24px; height:24px; cursor:pointer;">
+                </div>
+              </div>
+              <div class="range-container">
+                <div class="range-header">
+                  <label for="range-outline-size">Outline Thickness</label>
+                  <div class="input-with-suffix">
+                    <input type="number" id="val-outline-size" class="val-input" value="1" min="1" max="5">
+                    <span class="val-suffix">px</span>
+                  </div>
+                </div>
+                <input type="range" id="range-outline-size" min="1" max="5" value="1" step="1" class="slider">
+              </div>
+            </div>
+          </section>
+
         </div> <!-- End of sidebar-scroll -->
 
         <!-- Sidebar Actions -->
@@ -882,3 +919,4 @@
   </script>
 </body>
 </html>
+
