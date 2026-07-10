@@ -1585,7 +1585,8 @@ function setupNavigation() {
   const tabs = [
     { nav: navVisualizer, tool: toolVisualizer },
     { nav: navConverter, tool: toolConverter },
-    { nav: navCheckerboard, tool: toolCheckerboard }
+    { nav: navCheckerboard, tool: toolCheckerboard },
+    { nav: nav3D, tool: tool3D }
   ];
 
   tabs.forEach(tab => {
@@ -2143,5 +2144,6 @@ function initCheckerboard() {
   drawCheckerboard();
   fitZoomToScreen(1920, 1080);
 }
+
 
 
