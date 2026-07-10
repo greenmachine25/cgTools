@@ -1878,6 +1878,8 @@ function initCheckerboard() {
   const rangeWidth = document.getElementById('range-check-width');
   const valHeight = document.getElementById('val-check-height');
   const rangeHeight = document.getElementById('range-check-height');
+  const checkAspect = document.getElementById('check-aspect-ratio');
+  const selectRes = document.getElementById('select-check-res');
   
   const valColor1 = document.getElementById('val-check-color1');
   const valColor2 = document.getElementById('val-check-color2');
@@ -1916,9 +1918,19 @@ function initCheckerboard() {
   btnZoomOut.addEventListener('click', () => { currentZoom = Math.max(0.10, currentZoom - 0.25); updateZoom(); });
   btnZoomReset.addEventListener('click', () => { currentZoom = 1; updateZoom(); });
 
-  const setupSlider = (rangeEl, valEl) => {
+  const setupSlider = (rangeEl, valEl, isWidth) => {
     rangeEl.addEventListener('input', () => {
       valEl.value = rangeEl.value;
+      if (checkAspect && checkAspect.checked) {
+        if (isWidth) {
+          valHeight.value = rangeEl.value;
+          rangeHeight.value = rangeEl.value;
+        } else {
+          valWidth.value = rangeEl.value;
+          rangeWidth.value = rangeEl.value;
+        }
+      }
+      if (selectRes) selectRes.value = 'custom';
       drawCheckerboard();
     });
     valEl.addEventListener('input', () => {
@@ -1929,14 +1941,24 @@ function initCheckerboard() {
       if (val < min) val = min;
       if (val > max) val = max;
       rangeEl.value = val;
+      if (checkAspect && checkAspect.checked) {
+        if (isWidth) {
+          valHeight.value = val;
+          rangeHeight.value = val;
+        } else {
+          valWidth.value = val;
+          rangeWidth.value = val;
+        }
+      }
+      if (selectRes) selectRes.value = 'custom';
       drawCheckerboard();
     });
     valEl.addEventListener('blur', () => { valEl.value = rangeEl.value; });
   };
 
-  setupSlider(rangeWidth, valWidth);
-  setupSlider(rangeHeight, valHeight);
-  setupSlider(rangeSquare, valSquare);
+  setupSlider(rangeWidth, valWidth, true);
+  setupSlider(rangeHeight, valHeight, false);
+  setupSlider(rangeSquare, valSquare, false);
   
   const setupSpinControls = (inputEl, rangeEl) => {
     const container = inputEl.closest('.input-with-suffix');
@@ -1973,6 +1995,19 @@ function initCheckerboard() {
   setupSpinControls(valWidth, rangeWidth);
   setupSpinControls(valHeight, rangeHeight);
   setupSpinControls(valSquare, rangeSquare);
+
+  if(selectRes) {
+    selectRes.addEventListener('change', () => {
+      if (selectRes.value !== 'custom') {
+        const [w, h] = selectRes.value.split('x').map(Number);
+        valWidth.value = w; rangeWidth.value = w;
+        valHeight.value = h; rangeHeight.value = h;
+        drawCheckerboard();
+      }
+    });
+  }
+
+  
 
   valColor1.addEventListener('input', drawCheckerboard);
   valColor2.addEventListener('input', drawCheckerboard);
@@ -2075,6 +2110,8 @@ function initCheckerboard() {
     valColor2.value = '#9ca3af';
     valSquare.value = 60; rangeSquare.value = 60;
     selectPreset.value = 'default';
+    if(selectRes) selectRes.value = '1920x1080';
+    if(checkAspect) checkAspect.checked = false;
     drawCheckerboard();
   });
 
@@ -2106,3 +2143,5 @@ function initCheckerboard() {
   drawCheckerboard();
   fitZoomToScreen(1920, 1080);
 }
+
+

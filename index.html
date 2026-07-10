@@ -74,6 +74,14 @@
           </svg>
           <span>Checkerboard</span>
         </div>
+        <div id="nav-3d" class="nav-item" data-target="tool-3d">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+            <line x1="12" y1="22.08" x2="12" y2="12" />
+          </svg>
+          <span>3D Reference</span>
+        </div>
       </nav>
 
       <div class="header-status">
@@ -613,6 +621,25 @@
 
             <section class="settings-group">
               <label class="group-label">1. CANVAS SIZE</label>
+              
+              <div class="select-container" style="margin-bottom: 15px;">
+                <select id="select-check-res" class="select-input">
+                  <option value="custom">Custom</option>
+                  <option value="1920x1080" selected>1920 x 1080 (FHD)</option>
+                  <option value="1000x1000">1000 x 1000</option>
+                  <option value="2000x2000">2000 x 2000</option>
+                  <option value="2048x2048">2048 x 2048 (Texture)</option>
+                  <option value="4096x4096">4096 x 4096 (4K Texture)</option>
+                </select>
+              </div>
+              
+              <div style="margin-bottom: 15px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #a19db3; font-size: 0.85rem;">
+                  <input type="checkbox" id="check-aspect-ratio" style="accent-color: #00FFFF;">
+                  Keep Aspect Ratio
+                </label>
+              </div>
+              
               <div class="slider-group">
                 <div class="slider-header">
                   <label>Width</label>
@@ -705,6 +732,82 @@
           </div>
         </section>
       </div>
+
+      <!-- 3D Reference Tool -->
+      <div id="tool-3d" class="app-workspace tool-hidden">
+        <!-- Sidebar -->
+        <aside class="settings-sidebar">
+          <div class="sidebar-header">
+            <h2>3D REFERENCE SETTINGS</h2>
+          </div>
+
+          <div class="sidebar-content">
+            <section class="settings-group">
+              <h3 class="group-title">1. Object Settings</h3>
+              
+              <div class="range-container margin-bottom-sm">
+                <div class="range-header">
+                  <label for="select-3d-shape">Shape</label>
+                </div>
+                <div class="select-container">
+                  <select id="select-3d-shape" class="custom-select">
+                    <option value="cube" selected>Cube</option>
+                    <option value="pyramid">Pyramid</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="range-container margin-bottom-sm">
+                <div class="range-header">
+                  <label for="select-3d-style">Render Style</label>
+                </div>
+                <div class="select-container">
+                  <select id="select-3d-style" class="custom-select">
+                    <option value="solid" selected>Solid Shading</option>
+                    <option value="wireframe">Wireframe</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="range-container">
+                <div class="range-header">
+                  <label for="range-3d-speed">Rotation Speed</label>
+                  <div class="input-with-suffix">
+                    <input type="number" id="val-3d-speed" class="val-input" value="50" min="0" max="100">
+                    <span class="val-suffix">%</span>
+                  </div>
+                </div>
+                <input type="range" id="range-3d-speed" min="0" max="100" value="50" step="5" class="slider">
+              </div>
+            </section>
+            
+            <section class="settings-group">
+              <h3 class="group-title">2. Pixel Filter</h3>
+              <p style="font-size: 0.85rem; color: #a19db3; margin-bottom: 12px; line-height: 1.4;">
+                This pipes the 3D scene directly into the Pixel Art Converter. Switch to the Pixel Art tab to tweak dithering, palettes, and edge detection in real-time!
+              </p>
+              <div class="range-container">
+                <div class="range-header">
+                  <label for="range-3d-resolution">Pixel Resolution</label>
+                  <div class="input-with-suffix">
+                    <input type="number" id="val-3d-resolution" class="val-input" value="128" min="32" max="512">
+                    <span class="val-suffix">px</span>
+                  </div>
+                </div>
+                <input type="range" id="range-3d-resolution" min="32" max="512" value="128" step="16" class="slider">
+              </div>
+            </section>
+          </div>
+        </aside>
+
+        <!-- Main Preview Area -->
+        <section class="preview-area">
+          <div class="canvas-wrapper">
+            <canvas id="canvas-3d" class="pixel-canvas" width="600" height="600"></canvas>
+          </div>
+        </section>
+      </div>
+
     </main>
 
     <!-- Toast Notifications -->
