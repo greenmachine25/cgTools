@@ -2291,29 +2291,35 @@ function initArmatureTool() {
     const totalH = headH + torsoH + legH;
     const startY = (canvasArmature.height - totalH) / 2;
     
-    // Draw Head (Blue)
-    drawRect(cx - headW/2, startY, headW, headH, '#3357FF');
-    
-    const torsoY = startY + headH;
-    // Draw Torso (Red)
-    drawRect(cx - torsoW/2, torsoY, torsoW, torsoH, '#FF3333');
-    
+        const torsoY = startY + headH;
     const legsY = torsoY + torsoH;
     const stanceOffset = (stance / 100) * torsoW;
     
-    // Draw Legs (Green)
-    drawRect(cx - legW - stanceOffset, legsY, legW, legH, '#33FF57'); // Left leg
-    drawRect(cx + stanceOffset, legsY, legW, legH, '#33FF57'); // Right leg
+    // 3/4 Perspective (Facing Left)
+    const torsoX = cx - torsoW/2 + (headW * 0.15); // Shift torso right slightly
     
-    // Draw Arms (Yellow)
-    const armPivotY = torsoY + (torsoH * 0.1); // Near top of torso
-    const leftArmX = cx - torsoW/2 - armW;
-    const rightArmX = cx + torsoW/2;
+    // 1. Back Arm (Right Arm) - Drawn behind torso
+    const backArmX = torsoX + torsoW * 0.6;
+    const armPivotY = torsoY + (torsoH * 0.1);
+    drawRect(backArmX, armPivotY, armW, armH, '#CCCC22', -armPose, armW/2, 0); // Darker yellow
     
-    // Left Arm (Rotates outwards)
-    drawRect(leftArmX, armPivotY, armW, armH, '#FFFF33', armPose, armW, 0);
-    // Right Arm (Rotates outwards)
-    drawRect(rightArmX, armPivotY, armW, armH, '#FFFF33', -armPose, 0, 0);
+    // 2. Back Leg (Right Leg) - Drawn behind torso
+    const backLegX = torsoX + torsoW * 0.5 + stanceOffset;
+    drawRect(backLegX, legsY, legW, legH, '#22CC44'); // Darker green
+    
+    // 3. Torso (Red)
+    drawRect(torsoX, torsoY, torsoW, torsoH, '#FF3333');
+    
+    // 4. Head (Blue) - Centered
+    drawRect(cx - headW/2, startY, headW, headH, '#3357FF');
+    
+    // 5. Front Leg (Left Leg) - Drawn in front
+    const frontLegX = torsoX + torsoW * 0.1 - stanceOffset;
+    drawRect(frontLegX, legsY, legW, legH, '#33FF57'); // Bright green
+    
+    // 6. Front Arm (Left Arm) - Drawn in front
+    const frontArmX = torsoX + torsoW * 0.2;
+    drawRect(frontArmX, armPivotY, armW, armH, '#FFFF33', armPose, armW/2, 0); // Bright yellow
     
     // Feed Armature rendering into Pixel Art Pipeline!
     sourceImage = canvasArmature; // Mock image
@@ -2366,3 +2372,106 @@ function initArmatureTool() {
     });
   });
 }
+
+function applyBackgroundRemoval(data, width, height) {
+  // Use top-left pixel as the background color to remove
+  const bgR = data[0];
+  const bgG = data[1];
+  const bgB = data[2];
+
+  const tolerance = parseInt(rangeBgTolerance.value); 
+  const visited = new Uint8Array(width * height);
+  const queue = [{x: 0, y: 0}];
+  visited[0] = 1;
+
+  while (queue.length > 0) {
+    const {x, y} = queue.shift();
+    const idx = (y * width + x) * 4;
+    
+    // Set transparent
+    data[idx + 3] = 0; 
+    
+    // Check neighbors
+    const neighbors = [
+      {nx: x+1, ny: y}, {nx: x-1, ny: y},
+      {nx: x, ny: y+1}, {nx: x, ny: y-1}
+    ];
+
+    for (let {nx, ny} of neighbors) {
+      if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+        const nIdx = ny * width + nx;
+        if (!visited[nIdx]) {
+          const pxIdx = nIdx * 4;
+          const r = data[pxIdx];
+          const g = data[pxIdx+1];
+          const b = data[pxIdx+2];
+          
+          if (Math.abs(r - bgR) <= tolerance && Math.abs(g - bgG) <= tolerance && Math.abs(b - bgB) <= tolerance) {
+            visited[nIdx] = 1;
+            queue.push({x: nx, y: ny});
+          }
+        }
+      }
+    }
+  }
+}
+
+function applyOuterOutline(data, width, height, thickness, colorHex) {
+  // Convert hex to rgb
+  const hex = colorHex.replace('#', '');
+  const rOutline = parseInt(hex.substring(0,2), 16);
+  const gOutline = parseInt(hex.substring(2,4), 16);
+  const bOutline = parseInt(hex.substring(4,6), 16);
+
+  let currentAlpha = new Uint8Array(width * height);
+  for (let i = 0; i < width * height; i++) {
+    currentAlpha[i] = data[i * 4 + 3];
+  }
+
+  for (let t = 0; t < thickness; t++) {
+    const nextAlpha = new Uint8Array(currentAlpha);
+    const newOutlinePixels = [];
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        
+        // If current pixel is transparent
+        if (currentAlpha[idx] === 0) {
+          // Check neighbors
+          let hasOpaqueNeighbor = false;
+          const neighbors = [
+            {nx: x+1, ny: y}, {nx: x-1, ny: y},
+            {nx: x, ny: y+1}, {nx: x, ny: y-1}
+          ];
+          
+          for (let {nx, ny} of neighbors) {
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+              const nIdx = ny * width + nx;
+              if (currentAlpha[nIdx] > 0) {
+                hasOpaqueNeighbor = true;
+                break;
+              }
+            }
+          }
+
+          if (hasOpaqueNeighbor) {
+            newOutlinePixels.push(idx);
+          }
+        }
+      }
+    }
+
+    // Apply new outline pixels
+    for (let idx of newOutlinePixels) {
+      nextAlpha[idx] = 255;
+      data[idx * 4] = rOutline;
+      data[idx * 4 + 1] = gOutline;
+      data[idx * 4 + 2] = bOutline;
+      data[idx * 4 + 3] = 255;
+    }
+    
+    currentAlpha = nextAlpha;
+  }
+}
+
