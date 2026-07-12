@@ -192,11 +192,15 @@ const rangeEdge = document.getElementById('range-edge');
 const valEdge = document.getElementById('val-edge');
 
 const checkRemoveBg = document.getElementById('check-remove-bg');
+const bgRemoveControls = document.getElementById('bg-remove-controls');
+const rangeBgTolerance = document.getElementById('range-bg-tolerance');
+const valBgTolerance = document.getElementById('val-bg-tolerance');
 const checkAddOutline = document.getElementById('check-add-outline');
 const outlineControls = document.getElementById('outline-controls');
 const colorOutline = document.getElementById('color-outline');
 const rangeOutlineSize = document.getElementById('range-outline-size');
 const valOutlineSize = document.getElementById('val-outline-size');
+const selectExportScale = document.getElementById('select-export-scale');
 
 const btnDownload = document.getElementById('btn-download');
 const btnReset = document.getElementById('btn-reset');
@@ -271,6 +275,7 @@ btnDownload.addEventListener('click', () => {
       smallCanvas.width = downloadPixelatedW;
       smallCanvas.height = downloadPixelatedH;
       const smallCtx = smallCanvas.getContext('2d');
+      smallCtx.imageSmoothingEnabled = false;
       
       // Draw full image downscaled
       smallCtx.drawImage(sourceImage, 0, 0, downloadPixelatedW, downloadPixelatedH);
@@ -280,8 +285,21 @@ btnDownload.addEventListener('click', () => {
       processImageData(imgData.data, downloadPixelatedW, downloadPixelatedH);
       smallCtx.putImageData(imgData, 0, 0);
       
+            // Get selected export scale
+      const scaleMultiplier = selectExportScale ? parseInt(selectExportScale.value) : 1;
+      const exportWidth = downloadPixelatedW * scaleMultiplier;
+      const exportHeight = downloadPixelatedH * scaleMultiplier;
+
+      // Upscale back to the exact chosen scale using Nearest Neighbor
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = exportWidth;
+      exportCanvas.height = exportHeight;
+      const exportCtx = exportCanvas.getContext('2d');
+      exportCtx.imageSmoothingEnabled = false;
+      exportCtx.drawImage(smallCanvas, 0, 0, exportWidth, exportHeight);
+
       // Convert to blob and download
-      smallCanvas.toBlob((blob) => {
+      exportCanvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -587,6 +605,7 @@ function runPipeline() {
   // Use global pipeline canvas to prevent GC thrash on rapid slider changes
   pipelineCanvas.width = pixelatedW;
   pipelineCanvas.height = pixelatedH;
+  pipelineCtx.imageSmoothingEnabled = false;
   
   // Draw the before-canvas contents scaled down
   pipelineCtx.drawImage(canvasBefore, 0, 0, pixelatedW, pixelatedH);
@@ -1315,7 +1334,12 @@ function resetZoomPan() {
   applyZoomPan();
 }
 
-  checkRemoveBg.addEventListener('change', triggerPipeline);
+  checkRemoveBg.addEventListener('change', () => {
+    bgRemoveControls.style.display = checkRemoveBg.checked ? 'block' : 'none';
+    triggerPipeline();
+  });
+  rangeBgTolerance.addEventListener('input', () => { valBgTolerance.value = rangeBgTolerance.value; triggerPipeline(); });
+  valBgTolerance.addEventListener('input', () => { rangeBgTolerance.value = valBgTolerance.value; triggerPipeline(); });
   checkAddOutline.addEventListener('change', () => {
     if(checkAddOutline.checked) {
       outlineControls.style.display = 'block';
@@ -2336,7 +2360,7 @@ function applyBackgroundRemoval(data, width, height) {
   const bgG = data[1];
   const bgB = data[2];
 
-  const tolerance = 5; 
+  const tolerance = parseInt(rangeBgTolerance.value); 
   const visited = new Uint8Array(width * height);
   const queue = [{x: 0, y: 0}];
   visited[0] = 1;
@@ -2431,5 +2455,8 @@ function applyOuterOutline(data, width, height, thickness, colorHex) {
     currentAlpha = nextAlpha;
   }
 }
+
+
+
 
 
