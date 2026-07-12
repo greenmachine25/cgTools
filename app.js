@@ -2248,12 +2248,21 @@ function initArmatureTool() {
     });
   });
   
-  function drawRect(x, y, w, h, color, angle = 0, pivotX = 0, pivotY = 0) {
+  function drawRounded(x, y, w, h, color, angle = 0, pivotX = 0, pivotY = 0, customRadii = null) {
+    const r = customRadii !== null ? customRadii : Math.min(w, h) / 2; // Pill shape by default
     ctxArmature.save();
     ctxArmature.translate(x + pivotX, y + pivotY);
     ctxArmature.rotate(angle * Math.PI / 180);
     ctxArmature.fillStyle = color;
-    ctxArmature.fillRect(-pivotX, -pivotY, w, h);
+    
+    ctxArmature.beginPath();
+    if (ctxArmature.roundRect) {
+      ctxArmature.roundRect(-pivotX, -pivotY, w, h, r);
+    } else {
+      ctxArmature.fillRect(-pivotX, -pivotY, w, h);
+    }
+    ctxArmature.fill();
+    
     ctxArmature.restore();
   }
   
@@ -2301,25 +2310,25 @@ function initArmatureTool() {
     // 1. Back Arm (Right Arm) - Drawn behind torso
     const backArmX = torsoX + torsoW * 0.6;
     const armPivotY = torsoY + (torsoH * 0.1);
-    drawRect(backArmX, armPivotY, armW, armH, '#CCCC22', -armPose, armW/2, 0); // Darker yellow
+    drawRounded(backArmX, armPivotY, armW, armH, '#CCCC22', -armPose, armW/2, 0); // Darker yellow
     
     // 2. Back Leg (Right Leg) - Drawn behind torso
     const backLegX = torsoX + torsoW * 0.5 + stanceOffset;
-    drawRect(backLegX, legsY, legW, legH, '#22CC44'); // Darker green
+    drawRounded(backLegX, legsY, legW, legH, '#22CC44'); // Darker green
     
     // 3. Torso (Red)
-    drawRect(torsoX, torsoY, torsoW, torsoH, '#FF3333');
+    drawRounded(torsoX, torsoY, torsoW, torsoH, '#FF3333', 0, 0, 0, [torsoW * 0.2, torsoW * 0.2, torsoW * 0.5, torsoW * 0.5]);
     
     // 4. Head (Blue) - Centered
-    drawRect(cx - headW/2, startY, headW, headH, '#3357FF');
+    drawRounded(cx - headW/2, startY, headW, headH, '#3357FF');
     
     // 5. Front Leg (Left Leg) - Drawn in front
     const frontLegX = torsoX + torsoW * 0.1 - stanceOffset;
-    drawRect(frontLegX, legsY, legW, legH, '#33FF57'); // Bright green
+    drawRounded(frontLegX, legsY, legW, legH, '#33FF57'); // Bright green
     
     // 6. Front Arm (Left Arm) - Drawn in front
     const frontArmX = torsoX + torsoW * 0.2;
-    drawRect(frontArmX, armPivotY, armW, armH, '#FFFF33', armPose, armW/2, 0); // Bright yellow
+    drawRounded(frontArmX, armPivotY, armW, armH, '#FFFF33', armPose, armW/2, 0); // Bright yellow
     
     // Feed Armature rendering into Pixel Art Pipeline!
     sourceImage = canvasArmature; // Mock image
@@ -2474,4 +2483,6 @@ function applyOuterOutline(data, width, height, thickness, colorHex) {
     currentAlpha = nextAlpha;
   }
 }
+
+
 
