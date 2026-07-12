@@ -2255,11 +2255,15 @@ function initArmatureTool() {
     ctxArmature.rotate(angle * Math.PI / 180);
     ctxArmature.fillStyle = color;
     
-    ctxArmature.beginPath();
     // Top circle
+    ctxArmature.beginPath();
     ctxArmature.arc(0, 0, rTop, 0, Math.PI * 2);
+    ctxArmature.fill();
+    
     // Bottom circle
+    ctxArmature.beginPath();
     ctxArmature.arc(0, length, rBottom, 0, Math.PI * 2);
+    ctxArmature.fill();
     
     // Calculate tangents for smooth connection
     const dx = 0;
@@ -2281,6 +2285,7 @@ function initArmatureTool() {
     const p4x = rTop * Math.cos(theta2 - Math.PI/2);
     const p4y = rTop * Math.sin(theta2 - Math.PI/2);
     
+    ctxArmature.beginPath();
     ctxArmature.moveTo(p1x, p1y);
     ctxArmature.lineTo(p2x, p2y);
     ctxArmature.lineTo(p3x, p3y);
@@ -2361,22 +2366,26 @@ function initArmatureTool() {
     
     // 3/4 Perspective (Facing Left) S-Curve
     const torsoX = cx + (headW * 0.05); // Shift torso right slightly
-    const topW = torsoW * 0.7; // Narrow shoulders
-    const bottomW = torsoW * 1.2; // Wide hips
+    const topW = torsoW * 0.8; // Narrower shoulders
+    const bottomW = torsoW * 1.05; // Slightly wider hips
     
-    // 1. Back Arm (Right Arm) - Drawn behind torso
-    const backArmX = torsoX + topW/2 - u*0.1;
-    const armPivotY = torsoY + u*0.1;
-    drawTaperedLimb(backArmX, armPivotY, u*0.25, u*0.15, armH, -armPose * 0.8, '#CCCC22'); // Darker yellow
+    // 1. Back Arm (Right Arm) - Drawn behind everything
+    const backArmX = torsoX + topW/2 - u*0.2;
+    const armPivotY = torsoY + u*0.2;
+    drawTaperedLimb(backArmX, armPivotY, u*0.3, u*0.15, armH, -armPose * 0.8, '#CCCC22'); // Darker yellow
     
     // 2. Back Leg (Right Leg) - Drawn behind torso
     const backLegX = torsoX + bottomW/4 + stanceOffset/2;
-    drawTaperedLimb(backLegX, legsY, u*0.4, u*0.15, legH, -stanceOffset*0.3, '#22CC44'); // Darker green
+    drawTaperedLimb(backLegX, legsY, u*0.45, u*0.2, legH, -stanceOffset*0.3, '#22CC44'); // Darker green
     
-    // 3. Torso (Red) Hourglass
+    // 3. Front Leg (Left Leg) - Thick thigh, small ankle, drawn behind torso for seamless pelvis
+    const frontLegX = torsoX - bottomW/4 - stanceOffset;
+    drawTaperedLimb(frontLegX, legsY, u*0.5, u*0.2, legH, stanceOffset*0.4, '#33FF57'); // Bright green
+    
+    // 4. Torso (Red) Hourglass
     drawTorso(torsoX, torsoY, topW, bottomW, torsoHReal, '#FF3333');
     
-    // 4. Head (Blue) - Massive, round
+    // 5. Head (Blue) - Massive, round, overlaps torso
     ctxArmature.fillStyle = '#3357FF';
     ctxArmature.beginPath();
     ctxArmature.arc(cx, startY + headH/2, headW/2, 0, Math.PI*2);
@@ -2386,13 +2395,9 @@ function initArmatureTool() {
     ctxArmature.ellipse(cx - headW*0.3, startY + headH*0.7, headW*0.2, headW*0.15, -Math.PI/6, 0, Math.PI*2);
     ctxArmature.fill();
     
-    // 5. Front Leg (Left Leg) - Thick thigh, small ankle
-    const frontLegX = torsoX - bottomW/4 - stanceOffset;
-    drawTaperedLimb(frontLegX, legsY, u*0.45, u*0.15, legH, stanceOffset*0.4, '#33FF57'); // Bright green
-    
-    // 6. Front Arm (Left Arm) - Drawn in front
-    const frontArmX = torsoX - topW/2 + u*0.1;
-    drawTaperedLimb(frontArmX, armPivotY, u*0.25, u*0.15, armH, armPose, '#FFFF33'); // Bright yellow
+    // 6. Front Arm (Left Arm) - Drawn in front of torso
+    const frontArmX = torsoX - topW/2 + u*0.2;
+    drawTaperedLimb(frontArmX, armPivotY, u*0.3, u*0.15, armH, armPose, '#FFFF33'); // Bright yellow
     
     // Feed Armature rendering into Pixel Art Pipeline!
     sourceImage = canvasArmature; // Mock image
