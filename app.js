@@ -244,6 +244,8 @@ btnReset.addEventListener('click', () => {
   outlineControls.style.display = 'none';
   colorOutline.value = '#ffffff';
   rangeOutlineSize.value = 1;
+  rangeBgTolerance.value = 5;
+  bgRemoveControls.style.display = 'none';
   
   // Set tab to custom depth
   switchPaletteTab('custom');
@@ -2455,6 +2457,7 @@ function applyOuterOutline(data, width, height, thickness, colorHex) {
     currentAlpha = nextAlpha;
   }
 }
+
 
 
 
