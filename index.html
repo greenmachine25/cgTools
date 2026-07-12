@@ -518,6 +518,20 @@
               </label>
             </div>
             
+            <div id="bg-remove-controls" style="display: none;">
+              <div class="range-container margin-bottom-sm">
+                <div class="range-header">
+                  <label for="range-bg-tolerance">Removal Tolerance</label>
+                  <div class="input-with-suffix">
+                    <input type="number" id="val-bg-tolerance" class="val-input" value="5" min="0" max="100">
+                    <span class="val-suffix">%</span>
+                  </div>
+                </div>
+                <input type="range" id="range-bg-tolerance" min="0" max="100" value="5" step="1" class="slider">
+              </div>
+            </div>
+
+            
             <div style="margin-bottom: 15px;">
               <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #a19db3; font-size: 0.85rem;">
                 <input type="checkbox" id="check-add-outline" style="accent-color: #00FFFF;">
