@@ -2248,19 +2248,73 @@ function initArmatureTool() {
     });
   });
   
-  function drawRounded(x, y, w, h, color, angle = 0, pivotX = 0, pivotY = 0, customRadii = null) {
-    const r = customRadii !== null ? customRadii : Math.min(w, h) / 2; // Pill shape by default
+  // Draws a drumstick/tapered limb (e.g., thick thigh to thin ankle)
+  function drawTaperedLimb(x, y, rTop, rBottom, length, angle, color) {
     ctxArmature.save();
-    ctxArmature.translate(x + pivotX, y + pivotY);
+    ctxArmature.translate(x, y);
     ctxArmature.rotate(angle * Math.PI / 180);
     ctxArmature.fillStyle = color;
     
     ctxArmature.beginPath();
-    if (ctxArmature.roundRect) {
-      ctxArmature.roundRect(-pivotX, -pivotY, w, h, r);
-    } else {
-      ctxArmature.fillRect(-pivotX, -pivotY, w, h);
-    }
+    // Top circle
+    ctxArmature.arc(0, 0, rTop, 0, Math.PI * 2);
+    // Bottom circle
+    ctxArmature.arc(0, length, rBottom, 0, Math.PI * 2);
+    
+    // Calculate tangents for smooth connection
+    const dx = 0;
+    const dy = length;
+    const dist = length;
+    const angleBase = Math.atan2(dy, dx);
+    const angleOffset = Math.asin((rTop - rBottom) / dist);
+    
+    const theta1 = angleBase + angleOffset;
+    const theta2 = angleBase - angleOffset;
+    
+    const p1x = rTop * Math.cos(theta1 + Math.PI/2);
+    const p1y = rTop * Math.sin(theta1 + Math.PI/2);
+    const p2x = rBottom * Math.cos(theta1 + Math.PI/2);
+    const p2y = length + rBottom * Math.sin(theta1 + Math.PI/2);
+    
+    const p3x = rBottom * Math.cos(theta2 - Math.PI/2);
+    const p3y = length + rBottom * Math.sin(theta2 - Math.PI/2);
+    const p4x = rTop * Math.cos(theta2 - Math.PI/2);
+    const p4y = rTop * Math.sin(theta2 - Math.PI/2);
+    
+    ctxArmature.moveTo(p1x, p1y);
+    ctxArmature.lineTo(p2x, p2y);
+    ctxArmature.lineTo(p3x, p3y);
+    ctxArmature.lineTo(p4x, p4y);
+    ctxArmature.closePath();
+    ctxArmature.fill();
+    ctxArmature.restore();
+  }
+
+  // Draws a dynamic hourglass/pear torso
+  function drawTorso(x, y, wTop, wBottom, h, color) {
+    ctxArmature.save();
+    ctxArmature.translate(x, y);
+    ctxArmature.fillStyle = color;
+    
+    // Top chest ellipse
+    ctxArmature.beginPath();
+    ctxArmature.ellipse(0, 0, wTop/2, wTop/2.5, 0, 0, Math.PI*2);
+    ctxArmature.fill();
+    
+    // Bottom pelvis ellipse
+    ctxArmature.beginPath();
+    ctxArmature.ellipse(0, h, wBottom/2, wBottom/2, 0, 0, Math.PI*2);
+    ctxArmature.fill();
+    
+    // Connect them with a curvy waist
+    ctxArmature.beginPath();
+    ctxArmature.moveTo(-wTop/2, 0);
+    // Left waist curve
+    ctxArmature.bezierCurveTo(-wTop/2 + 2, h/2, -wBottom/2, h/2, -wBottom/2, h);
+    // Right waist curve
+    ctxArmature.lineTo(wBottom/2, h);
+    ctxArmature.bezierCurveTo(wBottom/2, h/2, wTop/2 - 2, h/2, wTop/2, 0);
+    ctxArmature.closePath();
     ctxArmature.fill();
     
     ctxArmature.restore();
