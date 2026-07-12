@@ -123,11 +123,11 @@ const btnDeleteConfig = document.getElementById('btn-delete-config');
 const navVisualizer = document.getElementById('nav-visualizer');
 const navConverter = document.getElementById('nav-converter');
 const navCheckerboard = document.getElementById('nav-checkerboard');
-const nav3D = document.getElementById('nav-3d');
+const navArmature = document.getElementById('nav-armature');
 const toolVisualizer = document.getElementById('tool-visualizer');
 const toolConverter = document.getElementById('tool-converter');
 const toolCheckerboard = document.getElementById('tool-checkerboard');
-const tool3D = document.getElementById('tool-3d');
+const toolArmature = document.getElementById('tool-armature');
 
 // Visualizer DOM
 const selectVizRes = document.getElementById('select-viz-res');
@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSettingsProfiles();
   initVisualizer();
   initCheckerboard();
-  init3DTool();
+  initArmatureTool();
   setupUploadListeners();
   setupSlidersAndControls();
   setupComparisonSlider();
@@ -1638,7 +1638,7 @@ function setupNavigation() {
     { nav: navVisualizer, tool: toolVisualizer },
     { nav: navConverter, tool: toolConverter },
     { nav: navCheckerboard, tool: toolCheckerboard },
-    { nav: nav3D, tool: tool3D }
+    { nav: navArmature, tool: toolArmature }
   ];
 
   tabs.forEach(tab => {
@@ -2202,264 +2202,167 @@ function initCheckerboard() {
 
 
 
+
 /* ==========================================================================
-   3D Reference Tool
+   Sprite Armature Template Tool
    ========================================================================== */
-function init3DTool() {
-  const canvas3D = document.getElementById('canvas-3d');
-  if (!canvas3D) return;
-  const ctx3D = canvas3D.getContext('2d', { willReadFrequently: true });
-  const selectShape = document.getElementById('select-3d-shape');
-  const selectStyle = document.getElementById('select-3d-style');
-  const rangeSpeed = document.getElementById('range-3d-speed');
-  const valSpeed = document.getElementById('val-3d-speed');
-  const rangeRes = document.getElementById('range-3d-resolution');
-  const valRes = document.getElementById('val-3d-resolution');
+function initArmatureTool() {
+  const canvasArmature = document.getElementById('canvas-armature');
+  if (!canvasArmature) return;
+  const ctxArmature = canvasArmature.getContext('2d', { willReadFrequently: true });
   
-  rangeSpeed.addEventListener('input', () => valSpeed.value = rangeSpeed.value);
-  rangeRes.addEventListener('input', () => valRes.value = rangeRes.value);
+  // Sliders
+  const rangeUnit = document.getElementById('range-armature-unit');
+  const valUnit = document.getElementById('val-armature-unit');
+  const rangeHead = document.getElementById('range-armature-head');
+  const valHead = document.getElementById('val-armature-head');
+  const rangeTorso = document.getElementById('range-armature-torso');
+  const valTorso = document.getElementById('val-armature-torso');
+  const rangeLegs = document.getElementById('range-armature-legs');
+  const valLegs = document.getElementById('val-armature-legs');
+  const rangeArms = document.getElementById('range-armature-arms');
+  const valArms = document.getElementById('val-armature-arms');
+  const rangePose = document.getElementById('range-armature-arm-pose');
+  const valPose = document.getElementById('val-armature-arm-pose');
+  const rangeStance = document.getElementById('range-armature-stance');
+  const valStance = document.getElementById('val-armature-stance');
   
-  let animationFrameId = null;
-  let angleX = 0;
-  let angleY = 0;
-  let is3DActive = false;
-  
-  const verticesCube = [
-    [-1,-1,-1], [1,-1,-1], [1,1,-1], [-1,1,-1],
-    [-1,-1,1], [1,-1,1], [1,1,1], [-1,1,1]
+  const armatureSliders = [
+    {r: rangeUnit, v: valUnit}, {r: rangeHead, v: valHead},
+    {r: rangeTorso, v: valTorso}, {r: rangeLegs, v: valLegs},
+    {r: rangeArms, v: valArms}, {r: rangePose, v: valPose},
+    {r: rangeStance, v: valStance}
   ];
-  const facesCube = [
-    [0,1,2,3], [1,5,6,2], [5,4,7,6], [4,0,3,7], [0,4,5,1], [3,2,6,7]
-  ];
-  const colorsCube = ["#FF5733", "#33FF57", "#3357FF", "#F033FF", "#FFF033", "#33FFF0"];
   
-  const verticesPyr = [
-    [0,-1,0], [-1,1,-1], [1,1,-1], [1,1,1], [-1,1,1]
-  ];
-  const facesPyr = [
-    [0,1,2], [0,2,3], [0,3,4], [0,4,1], [1,4,3,2]
-  ];
-  const colorsPyr = ["#FF5733", "#33FF57", "#3357FF", "#F033FF", "#333333"];
+  let isArmatureActive = false;
+  let armatureAnimFrame = null;
   
-  function project(vertex, angleX, angleY) {
-    let x = vertex[0], y = vertex[1], z = vertex[2];
-    
-    // Rotate Y
-    let temp = x * Math.cos(angleY) - z * Math.sin(angleY);
-    let nz = x * Math.sin(angleY) + z * Math.cos(angleY);
-    x = temp;
-    
-    // Rotate X
-    temp = y * Math.cos(angleX) - nz * Math.sin(angleX);
-    nz = y * Math.sin(angleX) + nz * Math.cos(angleX);
-    y = temp;
-    
-    const scale = 180;
-    // Perspective projection
-    const perspective = 300 / (300 + nz);
-    return {
-      x: x * scale * perspective + canvas3D.width / 2,
-      y: y * scale * perspective + canvas3D.height / 2,
-      z: nz
-    };
+  armatureSliders.forEach(s => {
+    s.r.addEventListener('input', () => {
+      s.v.value = s.r.value;
+      if (isArmatureActive) renderArmature();
+    });
+    s.v.addEventListener('input', () => {
+      s.r.value = s.v.value;
+      if (isArmatureActive) renderArmature();
+    });
+  });
+  
+  function drawRect(x, y, w, h, color, angle = 0, pivotX = 0, pivotY = 0) {
+    ctxArmature.save();
+    ctxArmature.translate(x + pivotX, y + pivotY);
+    ctxArmature.rotate(angle * Math.PI / 180);
+    ctxArmature.fillStyle = color;
+    ctxArmature.fillRect(-pivotX, -pivotY, w, h);
+    ctxArmature.restore();
   }
   
-  function render3D() {
-    if (!is3DActive) return;
+  function renderArmature() {
+    if (!isArmatureActive) return;
     
-    ctx3D.fillStyle = '#0f0728'; // Match theme
-    ctx3D.fillRect(0, 0, canvas3D.width, canvas3D.height);
+    // Solid background so background remover works perfectly
+    ctxArmature.fillStyle = '#0f0728'; // Standard bg color
+    ctxArmature.fillRect(0, 0, canvasArmature.width, canvasArmature.height);
     
-    const shape = selectShape.value;
-    const style = selectStyle.value;
-    const speed = parseInt(rangeSpeed.value) / 100;
+    const u = parseFloat(rangeUnit.value);
+    const rHead = parseFloat(rangeHead.value);
+    const rTorso = parseFloat(rangeTorso.value);
+    const rLegs = parseFloat(rangeLegs.value);
+    const rArms = parseFloat(rangeArms.value);
+    const armPose = parseFloat(rangePose.value);
+    const stance = parseFloat(rangeStance.value);
     
-    angleX += 0.02 * speed;
-    angleY += 0.03 * speed;
+    const cx = canvasArmature.width / 2;
     
-    const verts = shape === 'cube' ? verticesCube : verticesPyr;
-    const faces = shape === 'cube' ? facesCube : facesPyr;
-    const colors = shape === 'cube' ? colorsCube : colorsPyr;
+    // Calculate sizes
+    const headW = u * rHead;
+    const headH = u * rHead;
     
-    const projected = verts.map(v => project(v, angleX, angleY));
+    const torsoW = headW * 0.8;
+    const torsoH = u * rTorso;
     
-    const sortedFaces = faces.map((face, index) => {
-      const zAvg = face.reduce((sum, vIdx) => sum + projected[vIdx].z, 0) / face.length;
-      return { face, index, zAvg };
-    }).sort((a, b) => b.zAvg - a.zAvg); // Painter's Algorithm
+    const legW = torsoW * 0.45;
+    const legH = u * rLegs;
     
-    sortedFaces.forEach(({ face, index }) => {
-      ctx3D.beginPath();
-      ctx3D.moveTo(projected[face[0]].x, projected[face[0]].y);
-      for (let i = 1; i < face.length; i++) {
-        ctx3D.lineTo(projected[face[i]].x, projected[face[i]].y);
-      }
-      ctx3D.closePath();
-      
-      if (style === 'solid') {
-        ctx3D.fillStyle = colors[index];
-        ctx3D.fill();
-        ctx3D.strokeStyle = '#000000';
-        ctx3D.lineWidth = 1;
-        ctx3D.stroke();
-      } else {
-        ctx3D.strokeStyle = '#00FFFF';
-        ctx3D.lineWidth = 2;
-        ctx3D.stroke();
-      }
-    });
+    const armW = torsoW * 0.35;
+    const armH = u * rArms;
     
-    // Feed 3D rendering into Pixel Art Pipeline!
-    sourceImage = canvas3D; // Mock image
+    // Top of head starts such that figure is roughly centered
+    const totalH = headH + torsoH + legH;
+    const startY = (canvasArmature.height - totalH) / 2;
     
+    // Draw Head (Blue)
+    drawRect(cx - headW/2, startY, headW, headH, '#3357FF');
+    
+    const torsoY = startY + headH;
+    // Draw Torso (Red)
+    drawRect(cx - torsoW/2, torsoY, torsoW, torsoH, '#FF3333');
+    
+    const legsY = torsoY + torsoH;
+    const stanceOffset = (stance / 100) * torsoW;
+    
+    // Draw Legs (Green)
+    drawRect(cx - legW - stanceOffset, legsY, legW, legH, '#33FF57'); // Left leg
+    drawRect(cx + stanceOffset, legsY, legW, legH, '#33FF57'); // Right leg
+    
+    // Draw Arms (Yellow)
+    const armPivotY = torsoY + (torsoH * 0.1); // Near top of torso
+    const leftArmX = cx - torsoW/2 - armW;
+    const rightArmX = cx + torsoW/2;
+    
+    // Left Arm (Rotates outwards)
+    drawRect(leftArmX, armPivotY, armW, armH, '#FFFF33', armPose, armW, 0);
+    // Right Arm (Rotates outwards)
+    drawRect(rightArmX, armPivotY, armW, armH, '#FFFF33', -armPose, 0, 0);
+    
+    // Feed Armature rendering into Pixel Art Pipeline!
+    sourceImage = canvasArmature; // Mock image
+    
+    // Process the image
     // Save current user resolution in Pixel tab
     const originalRes = rangeResolution.value;
     
-    // Override resolution for 3D processing
-    rangeResolution.value = rangeRes.value;
-    
-    // Put 3D content into canvasBefore
+    // Make sure we have a clean feed to the pipeline
+    ctxBefore.imageSmoothingEnabled = false;
     ctxBefore.clearRect(0, 0, canvasBefore.width, canvasBefore.height);
     canvasBefore.width = 600;
     canvasBefore.height = 600;
-    ctxBefore.drawImage(canvas3D, 0, 0, 600, 600);
+    ctxBefore.drawImage(canvasArmature, 0, 0, 600, 600);
     
-    // Process the image
+    // Trigger the pipeline
     runPipeline();
     
-    // Restore User's pixel tab resolution
+    // Restore User's pixel tab resolution (though we didn't change it here, kept for consistency)
     rangeResolution.value = originalRes;
     
-    animationFrameId = requestAnimationFrame(render3D);
+    armatureAnimFrame = requestAnimationFrame(renderArmature);
   }
   
-  const nav3DLocal = document.getElementById('nav-3d');
-  if(nav3DLocal) {
-    nav3DLocal.addEventListener('click', () => {
-      is3DActive = true;
+  const navArmatureLocal = document.getElementById('nav-armature');
+  if(navArmatureLocal) {
+    navArmatureLocal.addEventListener('click', () => {
+      isArmatureActive = true;
       switchPaletteTab('custom'); // Show palette tools
-      render3D();
+      
+      // Auto-set optimal settings for armatures (Outline, No BG, Solid Colors)
+      if (typeof checkRemoveBg !== 'undefined' && !checkRemoveBg.checked) {
+        checkRemoveBg.checked = true;
+        if (typeof bgRemoveControls !== 'undefined') bgRemoveControls.style.display = 'block';
+      }
+      if (typeof checkAddOutline !== 'undefined' && !checkAddOutline.checked) {
+        checkAddOutline.checked = true;
+        if (typeof outlineControls !== 'undefined') outlineControls.style.display = 'block';
+      }
+      
+      renderArmature();
     });
   }
   
   [navVisualizer, navConverter, navCheckerboard].forEach(nav => {
     if(!nav) return;
     nav.addEventListener('click', () => {
-      is3DActive = false;
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      isArmatureActive = false;
+      if (armatureAnimFrame) cancelAnimationFrame(armatureAnimFrame);
     });
   });
 }
-
-
-
-
-
-
-function applyBackgroundRemoval(data, width, height) {
-  // Use top-left pixel as the background color to remove
-  const bgR = data[0];
-  const bgG = data[1];
-  const bgB = data[2];
-
-  const tolerance = parseInt(rangeBgTolerance.value); 
-  const visited = new Uint8Array(width * height);
-  const queue = [{x: 0, y: 0}];
-  visited[0] = 1;
-
-  while (queue.length > 0) {
-    const {x, y} = queue.shift();
-    const idx = (y * width + x) * 4;
-    
-    // Set transparent
-    data[idx + 3] = 0; 
-    
-    // Check neighbors
-    const neighbors = [
-      {nx: x+1, ny: y}, {nx: x-1, ny: y},
-      {nx: x, ny: y+1}, {nx: x, ny: y-1}
-    ];
-
-    for (let {nx, ny} of neighbors) {
-      if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-        const nIdx = ny * width + nx;
-        if (!visited[nIdx]) {
-          const pxIdx = nIdx * 4;
-          const r = data[pxIdx];
-          const g = data[pxIdx+1];
-          const b = data[pxIdx+2];
-          
-          if (Math.abs(r - bgR) <= tolerance && Math.abs(g - bgG) <= tolerance && Math.abs(b - bgB) <= tolerance) {
-            visited[nIdx] = 1;
-            queue.push({x: nx, y: ny});
-          }
-        }
-      }
-    }
-  }
-}
-
-function applyOuterOutline(data, width, height, thickness, colorHex) {
-  // Convert hex to rgb
-  const hex = colorHex.replace('#', '');
-  const rOutline = parseInt(hex.substring(0,2), 16);
-  const gOutline = parseInt(hex.substring(2,4), 16);
-  const bOutline = parseInt(hex.substring(4,6), 16);
-
-  let currentAlpha = new Uint8Array(width * height);
-  for (let i = 0; i < width * height; i++) {
-    currentAlpha[i] = data[i * 4 + 3];
-  }
-
-  for (let t = 0; t < thickness; t++) {
-    const nextAlpha = new Uint8Array(currentAlpha);
-    const newOutlinePixels = [];
-
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const idx = y * width + x;
-        
-        // If current pixel is transparent
-        if (currentAlpha[idx] === 0) {
-          // Check neighbors
-          let hasOpaqueNeighbor = false;
-          const neighbors = [
-            {nx: x+1, ny: y}, {nx: x-1, ny: y},
-            {nx: x, ny: y+1}, {nx: x, ny: y-1}
-          ];
-          
-          for (let {nx, ny} of neighbors) {
-            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-              const nIdx = ny * width + nx;
-              if (currentAlpha[nIdx] > 0) {
-                hasOpaqueNeighbor = true;
-                break;
-              }
-            }
-          }
-
-          if (hasOpaqueNeighbor) {
-            newOutlinePixels.push(idx);
-          }
-        }
-      }
-    }
-
-    // Apply new outline pixels
-    for (let idx of newOutlinePixels) {
-      nextAlpha[idx] = 255;
-      data[idx * 4] = rOutline;
-      data[idx * 4 + 1] = gOutline;
-      data[idx * 4 + 2] = bOutline;
-      data[idx * 4 + 3] = 255;
-    }
-    
-    currentAlpha = nextAlpha;
-  }
-}
-
-
-
-
-
-
